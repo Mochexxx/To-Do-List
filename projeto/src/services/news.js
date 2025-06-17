@@ -56,9 +56,9 @@ const newsService = {
     }
   },
   
-  async getNewsByCategory(category, country = 'us', pageSize = 20) {
+  async getNewsByCategory(category, country = 'us', pageSize = 20, page = 1) {
     try {
-      const url = `${NEWS_API_URL}/top-headlines?category=${category}&country=${country}&pageSize=${pageSize}&apiKey=${NEWS_API_KEY}`;
+      const url = `${NEWS_API_URL}/top-headlines?category=${category}&country=${country}&pageSize=${pageSize}&page=${page}&apiKey=${NEWS_API_KEY}`;
       console.log('Fazendo requisição para:', url);
       
       const response = await fetch(url);

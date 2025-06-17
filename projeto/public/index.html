@@ -11,7 +11,7 @@
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
         <style>
             body { font-family: Arial, sans-serif; margin: 2rem; }
-            #root { border: 1px solid #ccc; padding: 2rem; border-radius: 8px; }
+            #root { border: 1px solid #ccc; padding: 2rem; border-radius: 8px; margin-top: 0; }
         </style>
     </head>
     <body>
@@ -555,6 +555,9 @@ function NewsSection({ darkMode = false }) {
   const [loading, setLoading] = React.useState(true);
   const [selectedCategory, setSelectedCategory] = React.useState('general');
   const [userCountry, setUserCountry] = React.useState(null);
+  const [page, setPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const newsContainerRef = React.useRef(null);
 
   const categories = [
     { id: 'general', name: 'Geral', icon: '📰' },
@@ -574,34 +577,48 @@ function NewsSection({ darkMode = false }) {
   }, []);
 
   React.useEffect(() => {
-    loadNews();
-  }, [selectedCategory, userCountry]);  const loadNews = async () => {
+    setNews([]);
+    setPage(1);
+    setHasMore(true);
+    loadNews(1, true);
+    // eslint-disable-next-line
+  }, [selectedCategory, userCountry]);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      if (!newsContainerRef.current || loading || !hasMore) return;
+      const { scrollTop, scrollHeight, clientHeight } = newsContainerRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        loadNews(page + 1);
+      }
+    };
+    const ref = newsContainerRef.current;
+    if (ref) ref.addEventListener('scroll', handleScroll);
+    return () => { if (ref) ref.removeEventListener('scroll', handleScroll); };
+  }, [loading, hasMore, page, newsContainerRef.current]);
+
+  const loadNews = async (pageToLoad = 1, reset = false) => {
     setLoading(true);
     try {
       const countryCode = userCountry?.newsCode || 'us';
-      console.log('Carregando notícias:', { selectedCategory, countryCode });
-      
-      // Check if newsService is available
       if (!window.newsService) {
-        console.error('newsService não está disponível');
         setNews(getMockNews());
+        setHasMore(false);
         return;
       }
-      
-      const articles = await newsService.getNewsByCategory(selectedCategory, countryCode);
-      console.log('Artigos carregados:', articles);
-      
-      // Se não há artigos, usar dados mockados
+      const pageSize = 20;
+      const articles = await newsService.getNewsByCategory(selectedCategory, countryCode, pageSize, pageToLoad);
       if (!articles || articles.length === 0) {
-        console.log('Nenhum artigo encontrado, usando dados mockados');
-        setNews(getMockNews());
+        if (reset) setNews(getMockNews());
+        setHasMore(false);
       } else {
-        setNews(articles);
+        setNews(prev => reset ? articles : [...prev, ...articles]);
+        setHasMore(articles.length === pageSize);
+        setPage(pageToLoad);
       }
     } catch (error) {
-      console.error('Erro ao carregar notícias:', error);
-      console.log('Usando dados mockados devido ao erro');
-      setNews(getMockNews());
+      if (reset) setNews(getMockNews());
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
@@ -709,8 +726,9 @@ function NewsSection({ darkMode = false }) {
           <p>Carregando notícias...</p>
         </div>
       ) : (
-        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
-          {news.length > 0 ? (            news.slice(0, 8).map((article, index) => (
+        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
+          {news.length > 0 ? (
+            news.map((article, index) => (
               <div key={index} style={{ 
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`, 
                 borderRadius: '8px', 
@@ -757,6 +775,8 @@ function NewsSection({ darkMode = false }) {
               <p>Nenhuma notícia encontrada para esta categoria.</p>
             </div>
           )}
+          {loading && <div style={{ textAlign: 'center', padding: '1rem' }}>Carregando mais notícias...</div>}
+          {!hasMore && !loading && <div style={{ textAlign: 'center', padding: '1rem', color: '#aaa' }}>Não há mais notícias.</div>}
         </div>
       )}
     </div>
@@ -793,23 +813,26 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
       <h3 style={{ marginBottom: '1rem' }}>📋 Dashboard de Tarefas</h3>
       
       {/* Mini Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
-        <div style={{ padding: '0.5rem', backgroundColor: '#e3f2fd', borderRadius: '6px', textAlign: 'center' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1976d2' }}>{stats.total || 0}</div>
-          <div style={{ fontSize: '0.8rem', color: '#666' }}>Total</div>
-        </div>
-        <div style={{ padding: '0.5rem', backgroundColor: '#fff3e0', borderRadius: '6px', textAlign: 'center' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f57c00' }}>{stats.pending || 0}</div>
-          <div style={{ fontSize: '0.8rem', color: '#666' }}>Pendentes</div>
-        </div>
-        <div style={{ padding: '0.5rem', backgroundColor: '#e8f5e8', borderRadius: '6px', textAlign: 'center' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#388e3c' }}>{stats.completed || 0}</div>
-          <div style={{ fontSize: '0.8rem', color: '#666' }}>Concluídas</div>
-        </div>
-        <div style={{ padding: '0.5rem', backgroundColor: '#ffebee', borderRadius: '6px', textAlign: 'center' }}>
-          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#d32f2f' }}>{stats.overdue || 0}</div>
-          <div style={{ fontSize: '0.8rem', color: '#666' }}>Atrasadas</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button
+          onClick={() => {
+            setFilterStatus('atrasada');
+            setFilteredTasks(tasks.filter(task => task.status === 'atrasada').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
+          }}
+          style={{
+            padding: '0.5rem',
+            backgroundColor: '#ffebee',
+            borderRadius: '6px',
+            textAlign: 'center',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            color: '#d32f2f',
+            fontWeight: 'bold'
+          }}
+        >
+          Atrasadas ({stats.overdue || 0})
+        </button>
       </div>
 
       {/* Compact Filters */}
@@ -1491,91 +1514,74 @@ function Dashboard() {
         marginBottom: '1rem', 
         paddingBottom: '1rem', 
         borderBottom: `1px solid ${darkMode ? '#333' : '#ddd'}`,
-        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
-        color: darkMode ? '#ffffff' : '#000000',
-        padding: '1rem',
-        borderRadius: '8px'
+        backgroundColor: darkMode ? '#fff' : '#fff',
+        color: '#000',
+        padding: '0.5rem 2rem 1.5rem 2rem', // padding-top reduzido
+        borderRadius: '0',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)',
+        minHeight: '80px',
       }}>
-        <h1 style={{ margin: 0 }}>📝 To-Do List & Notícias</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>          <button 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 40, height: 40, marginRight: 10, verticalAlign: 'middle' }} />
+          <span style={{ fontWeight: 700, fontSize: '2.5rem', letterSpacing: '-1px' }}>To-Do List & Notícias</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <button 
             onClick={() => setCurrentView('create')}
             style={{ 
-              padding: '0.5rem 1rem', 
-              backgroundColor: '#28a745', 
-              color: 'white', 
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0.5rem 1.2rem', 
+              backgroundColor: '#00ff22', 
+              color: '#fff', 
               border: 'none', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)'
             }}
           >
-            ➕ Nova Tarefa
+            <span style={{ fontSize: '1.3rem' }}>➕</span> Nova Tarefa
           </button>
-          
           <button 
             onClick={toggleDarkMode}
             style={{ 
-              padding: '0.5rem', 
-              backgroundColor: darkMode ? '#ffc107' : '#6c757d', 
-              color: darkMode ? '#000' : 'white', 
-              border: 'none', 
-              borderRadius: '50%', 
-              cursor: 'pointer',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.2rem'
+              width: 48, height: 48, borderRadius: '50%', border: 'none',
+              background: '#8ba0b2', color: '#fff', fontSize: '1.5rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)', cursor: 'pointer'
             }}
             title={darkMode ? 'Modo claro' : 'Modo escuro'}
           >
-            {darkMode ? '☀️' : '🌙'}
+            <span style={{ fontSize: '1.5rem' }}>🌙</span>
           </button>
-          
           {user && (
-            <button 
-              onClick={() => setCurrentView('profile')}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                background: 'none',
-                border: '1px solid #ddd',
-                borderRadius: '20px',
-                padding: '0.5rem 1rem',
-                cursor: 'pointer',
-                color: '#333'
-              }}
-            >
-              {user.profileImage ? (
-                <img 
-                  src={user.profileImage} 
-                  alt="Perfil" 
-                  style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                '👤'
-              )}
-              {user.username}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem', fontWeight: 500 }}>
+              <span style={{ color: '#7c3aed', fontSize: '1.3rem' }}>👤</span> {user.username}
               {user.country && (
-                <span>
+                <span style={{ fontSize: '1.1rem', marginLeft: 2 }}>
                   {countries.find(c => c.code === user.country)?.flag}
                 </span>
               )}
-            </button>
+              <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: 2 }}>PT</span>
+            </span>
           )}
           <button 
             onClick={handleLogout}
             style={{ 
-              padding: '0.5rem 1rem', 
-              backgroundColor: '#dc3545', 
-              color: 'white', 
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0.5rem 1.2rem', 
+              backgroundColor: '#ff0033', 
+              color: '#fff', 
               border: 'none', 
-              borderRadius: '4px', 
-              cursor: 'pointer' 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              fontSize: '1.1rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)'
             }}
           >
-            🚪 Sair
+            <span style={{ fontSize: '1.3rem' }}>🚪</span> Sair
           </button>
         </div>
       </header>      {/* Layout em duas colunas */}

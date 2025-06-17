@@ -101,14 +101,113 @@ function TaskForm({ task, onSave, onCancel }) {
     return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
   };
 
-  // Rest of the component JSX would be similar to the HTML version
-  // but with proper React JSX syntax
-  
   return (
-    <div>
-      {/* Full component implementation would go here */}
-      <p>Enhanced TaskForm with all new fields - see HTML version for full implementation</p>
-    </div>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div>
+        <label>Título:</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={100}
+          required
+        />
+        {errors.title && <p style={{ color: 'red' }}>{errors.title}</p>}
+      </div>
+
+      <div>
+        <label>Descrição:</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          maxLength={1000}
+        />
+        {errors.description && <p style={{ color: 'red' }}>{errors.description}</p>}
+      </div>
+
+      <div>
+        <label>Data de Início:</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label>Data de Fim:</label>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
+        {errors.dueDate && <p style={{ color: 'red' }}>{errors.dueDate}</p>}
+      </div>
+
+      <div>
+        <label>Prioridade:</label>
+        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+          <option value="baixa">Baixa</option>
+          <option value="média">Média</option>
+          <option value="alta">Alta</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Estado:</label>
+        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="pendente">Pendente</option>
+          <option value="em_progresso">Em Progresso</option>
+          <option value="concluída">Concluída</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Recorrente:</label>
+        <input
+          type="checkbox"
+          checked={isRecurring}
+          onChange={(e) => setIsRecurring(e.target.checked)}
+        />
+        {isRecurring && (
+          <select value={recurringType} onChange={(e) => setRecurringType(e.target.value)}>
+            <option value="diária">Diária</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensal">Mensal</option>
+            <option value="anual">Anual</option>
+          </select>
+        )}
+      </div>
+
+      <div>
+        <label>Etiquetas (tags):</label>
+        <input
+          type="text"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="Ex: trabalho, pessoal, urgente"
+        />
+      </div>
+
+      <div>
+        <label>Duração Estimada (minutos):</label>
+        <input
+          type="number"
+          value={estimatedDuration}
+          onChange={(e) => setEstimatedDuration(e.target.value)}
+          min={1}
+          max={10080}
+        />
+        {errors.estimatedDuration && <p style={{ color: 'red' }}>{errors.estimatedDuration}</p>}
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <button type="submit" disabled={loading}>{isEditing ? 'Atualizar' : 'Criar'}</button>
+        <button type="button" onClick={onCancel}>Cancelar</button>
+      </div>
+
+      {errors.submit && <p style={{ color: 'red' }}>{errors.submit}</p>}
+    </form>
   );
 }
 

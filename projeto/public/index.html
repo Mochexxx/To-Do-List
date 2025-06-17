@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>React Test Window</title>
+        <title>📝 To-Do List - Gestão de Tarefas e Notícias</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <!-- React and ReactDOM CDN -->
         <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -15,239 +15,868 @@
         </style>
     </head>
     <body>
-        <div id="root"></div>        <script type="text/babel">            function LoginPage({ setCurrentPage }) {
-                const [email, setEmail] = React.useState('');
-                const [password, setPassword] = React.useState('');
-                const [remember, setRemember] = React.useState(false);
+        <div id="root"></div>        <script src="../src/services/api.js"></script>
+        <script src="../src/services/news.js"></script>
+        <script type="text/babel">
+// Countries data with flags and news codes
+const countries = [
+  { code: 'pt', name: 'Portugal', flag: '🇵🇹', newsCode: 'pt' },
+  { code: 'br', name: 'Brasil', flag: '🇧🇷', newsCode: 'br' },
+  { code: 'us', name: 'Estados Unidos', flag: '🇺🇸', newsCode: 'us' },
+  { code: 'uk', name: 'Reino Unido', flag: '🇬🇧', newsCode: 'gb' },
+  { code: 'es', name: 'Espanha', flag: '🇪🇸', newsCode: 'es' },
+  { code: 'fr', name: 'França', flag: '🇫🇷', newsCode: 'fr' },
+  { code: 'de', name: 'Alemanha', flag: '🇩🇪', newsCode: 'de' },
+  { code: 'it', name: 'Itália', flag: '🇮🇹', newsCode: 'it' },
+  { code: 'ca', name: 'Canadá', flag: '🇨🇦', newsCode: 'ca' },
+  { code: 'au', name: 'Austrália', flag: '🇦🇺', newsCode: 'au' }
+];
 
-                const handleSubmit = (e) => {
-                    e.preventDefault();
-                    console.log({ email, password, remember });
-                    // TODO: integrar authService.login
-                };
+function LoginPage({ onSwitchToRegister }) {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-                return (
-                    <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
-                        <button onClick={() => setCurrentPage('main')} style={{ marginBottom: '1rem' }}>
-                            Back
-                        </button>
-                        <h2>Login</h2>
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="email">Email</label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    required
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                            </div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="password">Senha</label>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    required
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                            </div>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        checked={remember}
-                                        onChange={e => setRemember(e.target.checked)}
-                                        style={{ marginRight: '0.5rem' }}
-                                    />
-                                    Lembrar senha
-                                </label>
-                            </div>
-                            <button type="submit" style={{ padding: '0.5rem 1rem' }}>
-                                Login
-                            </button>
-                        </form>
-                    </div>
-                );
-            }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-            function RegisterPage({ setCurrentPage }) {
-                const [username, setUsername] = React.useState('');
-                const [email, setEmail] = React.useState('');
-                const [password, setPassword] = React.useState('');
-                const [confirmPassword, setConfirmPassword] = React.useState('');
-                const [captcha, setCaptcha] = React.useState('');
-                const [captchaAnswer, setCaptchaAnswer] = React.useState(generateCaptcha());
-                const [errors, setErrors] = React.useState({});
+    try {
+      await authService.login({ email, password });
+      window.location.reload(); // Refresh to show authenticated state
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                function generateCaptcha() {
-                    const num1 = Math.floor(Math.random() * 10) + 1;
-                    const num2 = Math.floor(Math.random() * 10) + 1;
-                    return { question: `${num1} + ${num2}`, answer: num1 + num2 };
-                }
+  return (
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '2rem' }}>
+      <h2>🔐 Login</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Email</label><br />
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Senha</label><br />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        
+        {error && (
+          <div style={{ color: 'red', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#ffeeee', border: '1px solid red', borderRadius: '4px' }}>
+            {error}
+          </div>
+        )}
+        
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ 
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: loading ? '#ccc' : '#007bff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            marginBottom: '1rem'
+          }}
+        >
+          {loading ? 'Entrando...' : 'Entrar'}
+        </button>
+      </form>
+      
+      <p style={{ textAlign: 'center' }}>
+        Não tem uma conta? {' '}
+        <button 
+          onClick={onSwitchToRegister}
+          style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Registre-se aqui
+        </button>
+      </p>
+    </div>
+  );
+}
 
-                const validateForm = () => {
-                    const newErrors = {};
+function RegisterPage({ onSwitchToLogin }) {
+  const [formData, setFormData] = React.useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    country: ''
+  });
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-                    if (!username.trim()) newErrors.username = 'Username é obrigatório';
-                    if (!email.trim()) newErrors.email = 'Email é obrigatório';
-                    if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email inválido';
-                    if (!password) newErrors.password = 'Password é obrigatória';
-                    if (password.length < 6) newErrors.password = 'Password deve ter pelo menos 6 caracteres';
-                    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords não coincidem';
-                    if (parseInt(captcha) !== captchaAnswer.answer) newErrors.captcha = 'Captcha incorreto';
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
-                    setErrors(newErrors);
-                    return Object.keys(newErrors).length === 0;
-                };
+    if (formData.password !== formData.confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
 
-                const handleSubmit = (e) => {
-                    e.preventDefault();
-                    if (validateForm()) {
-                        console.log({ username, email, password });
-                        alert('Registro realizado com sucesso!');
-                    }
-                };
+    if (!formData.country) {
+      setError('Por favor, selecione seu país');
+      return;
+    }
 
-                const refreshCaptcha = () => {
-                    setCaptchaAnswer(generateCaptcha());
-                    setCaptcha('');
-                };
+    setLoading(true);
 
-                return (
-                    <div style={{ maxWidth: '400px', margin: '2rem auto' }}>
-                        <button onClick={() => setCurrentPage('main')} style={{ marginBottom: '1rem' }}>
-                            Back
-                        </button>
-                        <h2>Registro</h2>
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="username">Username</label>
-                                <input
-                                    id="username"
-                                    type="text"
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                                {errors.username && <small style={{ color: 'red' }}>{errors.username}</small>}
-                            </div>
+    try {
+      const selectedCountry = countries.find(c => c.code === formData.country);
+      
+      const userData = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        country: formData.country,
+        countryName: selectedCountry.name,
+        newsCountryCode: selectedCountry.newsCode,
+        registeredAt: new Date().toISOString()
+      };
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="email">Email</label>
-                                <input
-                                    id="email"
-                                    type="email"
-                                    value={email}
-                                    onChange={e => setEmail(e.target.value)}
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                                {errors.email && <small style={{ color: 'red' }}>{errors.email}</small>}
-                            </div>
+      await authService.register(userData);
+      alert('Registro realizado com sucesso! Agora você pode fazer login.');
+      onSwitchToLogin();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="password">Password</label>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                                {errors.password && <small style={{ color: 'red' }}>{errors.password}</small>}
-                            </div>
+  const handleChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label htmlFor="confirmPassword">Confirmar Password</label>
-                                <input
-                                    id="confirmPassword"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                    style={{ width: '100%', padding: '0.5rem' }}
-                                />
-                                {errors.confirmPassword && <small style={{ color: 'red' }}>{errors.confirmPassword}</small>}
-                            </div>
+  return (
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '2rem' }}>
+      <h2>📝 Registro</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Nome de usuário</label><br />
+          <input
+            type="text"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Email</label><br />
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label>País *</label><br />
+          <small style={{ color: '#666' }}>Seu país influenciará a priorização das notícias por região</small><br />
+          <select
+            name="country"
+            value={formData.country}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          >
+            <option value="">Selecione seu país</option>
+            {countries.map(country => (
+              <option key={country.code} value={country.code}>
+                {country.flag} {country.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Senha</label><br />
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Confirmar senha</label><br />
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem' }}
+          />
+        </div>
+        
+        {error && (
+          <div style={{ color: 'red', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#ffeeee', border: '1px solid red', borderRadius: '4px' }}>
+            {error}
+          </div>
+        )}
+        
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ 
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: loading ? '#ccc' : '#28a745', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            marginBottom: '1rem'
+          }}
+        >
+          {loading ? 'Registrando...' : 'Registrar'}
+        </button>
+      </form>
+      
+      <p style={{ textAlign: 'center' }}>
+        Já tem uma conta? {' '}
+        <button 
+          onClick={onSwitchToLogin}
+          style={{ background: 'none', border: 'none', color: '#007bff', cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Faça login aqui
+        </button>
+      </p>
+    </div>
+  );
+}
 
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label>Captcha: {captchaAnswer.question} = ?</label>
-                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                    <input
-                                        type="number"
-                                        value={captcha}
-                                        onChange={e => setCaptcha(e.target.value)}
-                                        style={{ padding: '0.5rem', flex: 1 }}
-                                        placeholder="Resposta"
-                                    />
-                                    <button type="button" onClick={refreshCaptcha}>🔄</button>
-                                </div>
-                                {errors.captcha && <small style={{ color: 'red' }}>{errors.captcha}</small>}
-                            </div>
+function TaskForm({ onTaskCreated }) {
+  const [formData, setFormData] = React.useState({
+    title: '',
+    description: '',
+    priority: 'média',
+    dueDate: '',
+    category: 'pessoal'
+  });
 
-                            <button type="submit" style={{ padding: '0.5rem 1rem', width: '100%' }}>
-                                Registrar
-                            </button>
-                        </form>
-                    </div>
-                );
-            }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const task = await tasksService.createTask({
+        ...formData,
+        status: 'pendente'
+      });
+      onTaskCreated(task);
+      setFormData({ title: '', description: '', priority: 'média', dueDate: '', category: 'pessoal' });
+    } catch (error) {
+      alert('Erro ao criar tarefa: ' + error.message);
+    }
+  };
 
-            function App() {
-                const [showAuthMenu, setShowAuthMenu] = React.useState(false);
-                const [currentPage, setCurrentPage] = React.useState('main');                if (currentPage === 'login') {
-                    return <LoginPage setCurrentPage={setCurrentPage} />;
-                }
-                
-                if (currentPage === 'register') {
-                    return <RegisterPage setCurrentPage={setCurrentPage} />;
-                }
+  const handleChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
 
-                return (
-                    <div>
-                        <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'flex-end', 
-                            padding: '1rem',
-                            position: 'relative'
-                        }}>
-                            <button 
-                                onClick={() => setShowAuthMenu(!showAuthMenu)}
-                                style={{ padding: '0.5rem 1rem' }}
-                            >
-                                Autenticar
-                            </button>
-                            
-                            {showAuthMenu && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    right: '0',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    padding: '0.5rem',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <button onClick={() => { setCurrentPage('login'); setShowAuthMenu(false); }}>Login</button>
-                                        <button onClick={() => { setCurrentPage('register'); setShowAuthMenu(false); }}>Registro</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div style={{ padding: '2rem' }}>
-                            {/* Main page content - empty for now */}
-                        </div>
-                    </div>
-                );
-            }
+  return (
+    <form onSubmit={handleSubmit} style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}>
+      <h3>➕ Nova Tarefa</h3>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+        <div>
+          <label>Título *</label><br />
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+            style={{ width: '100%', padding: '0.5rem' }}
+          />
+        </div>
+        
+        <div>
+          <label>Categoria</label><br />
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '0.5rem' }}
+          >
+            <option value="pessoal">Pessoal</option>
+            <option value="trabalho">Trabalho</option>
+            <option value="estudos">Estudos</option>
+            <option value="saude">Saúde</option>
+            <option value="financas">Finanças</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style={{ marginBottom: '1rem' }}>
+        <label>Descrição</label><br />
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          style={{ width: '100%', padding: '0.5rem', minHeight: '80px' }}
+          placeholder="Descreva sua tarefa..."
+        />
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+        <div>
+          <label>Prioridade</label><br />
+          <select
+            name="priority"
+            value={formData.priority}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '0.5rem' }}
+          >
+            <option value="baixa">🟢 Baixa</option>
+            <option value="média">🟡 Média</option>
+            <option value="alta">🟠 Alta</option>
+            <option value="urgente">🔴 Urgente</option>
+          </select>
+        </div>
+        
+        <div>
+          <label>Data limite</label><br />
+          <input
+            type="datetime-local"
+            name="dueDate"
+            value={formData.dueDate}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '0.5rem' }}
+          />
+        </div>
+      </div>
+      
+      <button type="submit" style={{ padding: '0.5rem 1rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+        Criar Tarefa
+      </button>
+    </form>
+  );
+}
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
+function TaskItem({ task, onTaskUpdated, onTaskDeleted }) {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editData, setEditData] = React.useState(task);
+
+  const priorityColors = {
+    baixa: '#28a745',
+    média: '#ffc107',
+    alta: '#fd7e14',
+    urgente: '#dc3545'
+  };
+
+  const statusIcons = {
+    pendente: '⏳',
+    em_progresso: '🔄',
+    concluída: '✅'
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      const updatedTask = await tasksService.updateTask(task._id, { status: newStatus });
+      onTaskUpdated(updatedTask);
+    } catch (error) {
+      alert('Erro ao atualizar tarefa: ' + error.message);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const updatedTask = await tasksService.updateTask(task._id, editData);
+      onTaskUpdated(updatedTask);
+      setIsEditing(false);
+    } catch (error) {
+      alert('Erro ao salvar edição: ' + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (confirm('Tem certeza que deseja deletar esta tarefa?')) {
+      try {
+        await tasksService.deleteTask(task._id);
+        onTaskDeleted(task._id);
+      } catch (error) {
+        alert('Erro ao deletar tarefa: ' + error.message);
+      }
+    }
+  };
+
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'concluída';
+
+  if (isEditing) {
+    return (
+      <div style={{ 
+        padding: '1rem', 
+        border: '1px solid #ddd', 
+        borderRadius: '8px', 
+        marginBottom: '1rem',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            value={editData.title}
+            onChange={e => setEditData(prev => ({ ...prev, title: e.target.value }))}
+            style={{ width: '100%', padding: '0.5rem' }}
+          />
+        </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <textarea
+            value={editData.description}
+            onChange={e => setEditData(prev => ({ ...prev, description: e.target.value }))}
+            style={{ width: '100%', padding: '0.5rem', minHeight: '60px' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={handleSaveEdit} style={{ padding: '0.5rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}>
+            Salvar
+          </button>
+          <button onClick={() => setIsEditing(false)} style={{ padding: '0.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px' }}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      padding: '1rem', 
+      border: `1px solid ${isOverdue ? '#dc3545' : '#ddd'}`, 
+      borderRadius: '8px', 
+      marginBottom: '1rem',
+      backgroundColor: isOverdue ? '#fff5f5' : 'white',
+      opacity: task.status === 'concluída' ? 0.7 : 1
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+        <h4 style={{ 
+          margin: 0, 
+          textDecoration: task.status === 'concluída' ? 'line-through' : 'none',
+          color: isOverdue ? '#dc3545' : 'inherit'
+        }}>
+          {statusIcons[task.status]} {task.title}
+        </h4>
+        <span style={{ 
+          backgroundColor: priorityColors[task.priority], 
+          color: 'white', 
+          padding: '0.25rem 0.5rem', 
+          borderRadius: '12px', 
+          fontSize: '0.8rem',
+          fontWeight: 'bold'
+        }}>
+          {task.priority}
+        </span>
+      </div>
+      
+      {task.description && (
+        <p style={{ margin: '0.5rem 0', color: '#666' }}>{task.description}</p>
+      )}
+      
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+        <span>📂 {task.category}</span>
+        {task.dueDate && (
+          <span style={{ color: isOverdue ? '#dc3545' : 'inherit' }}>
+            ⏰ {new Date(task.dueDate).toLocaleString('pt-BR')}
+            {isOverdue && ' (Atrasada)'}
+          </span>
+        )}
+      </div>
+      
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <select
+          value={task.status}
+          onChange={e => handleStatusChange(e.target.value)}
+          style={{ padding: '0.25rem', fontSize: '0.9rem' }}
+        >
+          <option value="pendente">⏳ Pendente</option>
+          <option value="em_progresso">🔄 Em Progresso</option>
+          <option value="concluída">✅ Concluída</option>
+        </select>
+        
+        <button 
+          onClick={() => setIsEditing(true)}
+          style={{ padding: '0.25rem 0.5rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.9rem' }}
+        >
+          ✏️ Editar
+        </button>
+        
+        <button 
+          onClick={handleDelete}
+          style={{ padding: '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.9rem' }}
+        >
+          🗑️ Deletar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NewsSection() {
+  const [news, setNews] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [selectedCategory, setSelectedCategory] = React.useState('general');
+  const [userCountry, setUserCountry] = React.useState(null);
+
+  const categories = [
+    { id: 'general', name: 'Geral', icon: '📰' },
+    { id: 'business', name: 'Negócios', icon: '💼' },
+    { id: 'technology', name: 'Tecnologia', icon: '💻' },
+    { id: 'sports', name: 'Esportes', icon: '⚽' },
+    { id: 'health', name: 'Saúde', icon: '🏥' },
+    { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
+  ];
+
+  React.useEffect(() => {
+    const user = authService.getUser();
+    if (user && user.country) {
+      const country = countries.find(c => c.code === user.country);
+      setUserCountry(country);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadNews();
+  }, [selectedCategory, userCountry]);
+
+  const loadNews = async () => {
+    setLoading(true);
+    try {
+      const countryCode = userCountry?.newsCode || 'us';
+      const articles = await newsService.getNewsByCategory(selectedCategory, countryCode);
+      setNews(articles);
+    } catch (error) {
+      console.error('Erro ao carregar notícias:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, marginRight: '1rem' }}>📰 Notícias</h3>
+        {userCountry && (
+          <span style={{ 
+            backgroundColor: '#e9ecef', 
+            padding: '0.25rem 0.5rem', 
+            borderRadius: '12px', 
+            fontSize: '0.9rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+            {userCountry.flag} Priorizadas para {userCountry.name}
+          </span>
+        )}
+      </div>
+      
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {categories.map(category => (
+          <button
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
+            style={{
+              padding: '0.5rem 1rem',
+              border: '1px solid #ddd',
+              borderRadius: '20px',
+              backgroundColor: selectedCategory === category.id ? '#007bff' : 'white',
+              color: selectedCategory === category.id ? 'white' : '#333',
+              cursor: 'pointer',
+              fontSize: '0.9rem'
+            }}
+          >
+            {category.icon} {category.name}
+          </button>
+        ))}
+      </div>
+      
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <p>Carregando notícias...</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {news.length > 0 ? (
+            news.slice(0, 6).map((article, index) => (
+              <div key={index} style={{ 
+                border: '1px solid #ddd', 
+                borderRadius: '8px', 
+                padding: '1rem',
+                display: 'flex',
+                gap: '1rem'
+              }}>
+                {article.urlToImage && (
+                  <img 
+                    src={article.urlToImage} 
+                    alt={article.title}
+                    style={{ 
+                      width: '120px', 
+                      height: '80px', 
+                      objectFit: 'cover', 
+                      borderRadius: '4px',
+                      flexShrink: 0
+                    }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>
+                    <a 
+                      href={article.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: 'none', color: '#333' }}
+                    >
+                      {article.title}
+                    </a>
+                  </h4>
+                  {article.description && (
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
+                      {article.description.substring(0, 150)}...
+                    </p>
+                  )}
+                  <div style={{ fontSize: '0.8rem', color: '#999' }}>
+                    {article.source?.name} • {new Date(article.publishedAt).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+              <p>Nenhuma notícia encontrada para esta categoria.</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dashboard() {
+  const [tasks, setTasks] = React.useState([]);
+  const [filteredTasks, setFilteredTasks] = React.useState([]);
+  const [filterStatus, setFilterStatus] = React.useState('todas');
+  const [filterPriority, setFilterPriority] = React.useState('todas');
+  const [stats, setStats] = React.useState({});
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    loadTasks();
+    setUser(authService.getUser());
+  }, []);
+
+  React.useEffect(() => {
+    applyFilters();
+  }, [tasks, filterStatus, filterPriority]);
+
+  const loadTasks = async () => {
+    try {
+      const tasksData = await tasksService.getTasks();
+      setTasks(tasksData);
+      setStats(tasksService.getStats());
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = tasks;
+
+    if (filterStatus !== 'todas') {
+      filtered = filtered.filter(task => task.status === filterStatus);
+    }
+
+    if (filterPriority !== 'todas') {
+      filtered = filtered.filter(task => task.priority === filterPriority);
+    }
+
+    setFilteredTasks(filtered);
+  };
+
+  const handleTaskCreated = (newTask) => {
+    setTasks(prev => [newTask, ...prev]);
+    setStats(tasksService.getStats());
+  };
+
+  const handleTaskUpdated = (updatedTask) => {
+    setTasks(prev => prev.map(task => 
+      task._id === updatedTask._id ? updatedTask : task
+    ));
+    setStats(tasksService.getStats());
+  };
+
+  const handleTaskDeleted = (taskId) => {
+    setTasks(prev => prev.filter(task => task._id !== taskId));
+    setStats(tasksService.getStats());
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    window.location.reload();
+  };
+
+  return (
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #ddd' }}>
+        <h1>📝 To-Do List & Notícias</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {user && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              👤 {user.username}
+              {user.country && (
+                <span>
+                  {countries.find(c => c.code === user.country)?.flag}
+                </span>
+              )}
+            </span>
+          )}
+          <button 
+            onClick={handleLogout}
+            style={{ padding: '0.5rem 1rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            🚪 Sair
+          </button>
+        </div>
+      </header>
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>📊 Total</h3>
+          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.total || 0}</p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: '#fff3e0', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#f57c00' }}>⏳ Pendentes</h3>
+          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.pending || 0}</p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: '#e8f5e8', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#388e3c' }}>✅ Concluídas</h3>
+          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.completed || 0}</p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: '#ffebee', borderRadius: '8px', textAlign: 'center' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', color: '#d32f2f' }}>🔥 Atrasadas</h3>
+          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.overdue || 0}</p>
+        </div>
+      </div>
+
+      <TaskForm onTaskCreated={handleTaskCreated} />
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <div>
+          <label style={{ marginRight: '0.5rem' }}>Status:</label>
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={{ padding: '0.5rem' }}
+          >
+            <option value="todas">Todas</option>
+            <option value="pendente">Pendentes</option>
+            <option value="em_progresso">Em Progresso</option>
+            <option value="concluída">Concluídas</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style={{ marginRight: '0.5rem' }}>Prioridade:</label>
+          <select
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value)}
+            style={{ padding: '0.5rem' }}
+          >
+            <option value="todas">Todas</option>
+            <option value="baixa">Baixa</option>
+            <option value="média">Média</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tasks List */}
+      <div>
+        <h3>📋 Suas Tarefas ({filteredTasks.length})</h3>
+        {filteredTasks.length > 0 ? (
+          filteredTasks.map(task => (
+            <TaskItem
+              key={task._id}
+              task={task}
+              onTaskUpdated={handleTaskUpdated}
+              onTaskDeleted={handleTaskDeleted}
+            />
+          ))
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            <p>Nenhuma tarefa encontrada com os filtros selecionados.</p>
+          </div>
+        )}
+      </div>
+
+      <NewsSection />
+    </div>
+  );
+}
+
+function App() {
+  const [currentPage, setCurrentPage] = React.useState('login');
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsAuthenticated(authService.isAuthenticated());
+  }, []);
+
+  if (isAuthenticated) {
+    return <Dashboard />;
+  }
+
+  return (
+    <div>
+      {currentPage === 'login' ? (
+        <LoginPage onSwitchToRegister={() => setCurrentPage('register')} />
+      ) : (
+        <RegisterPage onSwitchToLogin={() => setCurrentPage('login')} />
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
         </script>
     </body>
 </html>

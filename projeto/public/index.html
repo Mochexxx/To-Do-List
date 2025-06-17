@@ -8,10 +8,17 @@
         <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
         <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
         <!-- Babel for JSX support -->
-        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 2rem; }
-            #root { border: 1px solid #ccc; padding: 2rem; border-radius: 8px; margin-top: 0; }
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>        <style>
+            * { box-sizing: border-box; }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
+                margin: 0; 
+                padding: 0;
+                background-color: #f5f5f5;
+            }
+            #root { 
+                min-height: 100vh;
+            }
         </style>
     </head>
     <body>
@@ -554,9 +561,9 @@ function NewsSection({ darkMode = false }) {
   const [news, setNews] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedCategory, setSelectedCategory] = React.useState('general');
-  const [userCountry, setUserCountry] = React.useState(null);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
+  const [apiStatus, setApiStatus] = React.useState('unknown'); // 'working', 'error', 'unknown'
   const newsContainerRef = React.useRef(null);
 
   const categories = [
@@ -567,141 +574,337 @@ function NewsSection({ darkMode = false }) {
     { id: 'health', name: 'Saúde', icon: '🏥' },
     { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
   ];
-
-  React.useEffect(() => {
-    const user = authService.getUser();
-    if (user && user.country) {
-      const country = countries.find(c => c.code === user.country);
-      setUserCountry(country);
-    }
-  }, []);
-
   React.useEffect(() => {
     setNews([]);
     setPage(1);
     setHasMore(true);
+    setLoading(true);
+    setApiStatus('unknown');
+    // Carrega a primeira página
     loadNews(1, true);
     // eslint-disable-next-line
-  }, [selectedCategory, userCountry]);
+  }, [selectedCategory]);
 
   React.useEffect(() => {
+    const ref = newsContainerRef.current;
+    if (!ref) return;
+    let ticking = false;
     const handleScroll = () => {
-      if (!newsContainerRef.current || loading || !hasMore) return;
-      const { scrollTop, scrollHeight, clientHeight } = newsContainerRef.current;
-      if (scrollTop + clientHeight >= scrollHeight - 100) {
-        loadNews(page + 1);
+      if (loading || !hasMore) return;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const { scrollTop, scrollHeight, clientHeight } = ref;
+          if (scrollTop + clientHeight >= scrollHeight - 100) {
+            loadNews(page + 1);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
-    const ref = newsContainerRef.current;
-    if (ref) ref.addEventListener('scroll', handleScroll);
-    return () => { if (ref) ref.removeEventListener('scroll', handleScroll); };
-  }, [loading, hasMore, page, newsContainerRef.current]);
-
-  const loadNews = async (pageToLoad = 1, reset = false) => {
+    ref.addEventListener('scroll', handleScroll);
+    return () => ref.removeEventListener('scroll', handleScroll);
+  }, [loading, hasMore, page, newsContainerRef.current]);  const loadNews = async (pageToLoad = 1, reset = false) => {
+    if (loading && !reset) return;
     setLoading(true);
+    console.log('🔄 Carregando notícias - Categoria:', selectedCategory, 'Página:', pageToLoad);
+    
     try {
-      const countryCode = userCountry?.newsCode || 'us';
-      if (!window.newsService) {
-        setNews(getMockNews());
-        setHasMore(false);
-        return;
+      let articles = [];
+      let apiWorked = false;
+      
+      // Primeiro, tentar carregar da API real
+      if (window.newsService && selectedCategory) {
+        try {
+          console.log('🌐 Tentando carregar da NewsAPI...');
+          setApiStatus('checking');
+          
+          if (selectedCategory === 'general') {
+            // Para 'geral', carregar as principais notícias
+            articles = await newsService.getTopHeadlines('us', 50);
+          } else {
+            // Para categorias específicas
+            articles = await newsService.getNewsByCategory(selectedCategory, 'us', 50, pageToLoad);
+          }
+          
+          console.log('📰 Artigos recebidos da API:', articles?.length || 0);
+          
+          if (articles && articles.length > 0) {
+            apiWorked = true;
+            setApiStatus('working');
+            console.log('✅ API funcionou! Usando dados reais');
+            
+            // Se for reset, substituir tudo
+            if (reset || pageToLoad === 1) {
+              setNews(articles);
+            } else {
+              // Se for scroll infinito, adicionar aos existentes
+              setNews(prev => [...prev, ...articles]);
+            }
+            
+            // Verificar se há mais páginas
+            setHasMore(articles.length === 50);
+            setPage(pageToLoad);
+          }
+        } catch (apiError) {
+          console.warn('⚠️ Erro na API, tentando fallback:', apiError.message);
+          setApiStatus('error');
+          apiWorked = false;
+        }
       }
-      const pageSize = 20;
-      const articles = await newsService.getNewsByCategory(selectedCategory, countryCode, pageSize, pageToLoad);
-      if (!articles || articles.length === 0) {
-        if (reset) setNews(getMockNews());
-        setHasMore(false);
-      } else {
-        setNews(prev => reset ? articles : [...prev, ...articles]);
-        setHasMore(articles.length === pageSize);
+      
+      // Se a API não funcionou, usar dados mock
+      if (!apiWorked) {
+        console.log('📝 Usando dados mock como fallback');
+        setApiStatus('mock');
+        const mockData = getMockNews();
+        console.log('📊 Total de notícias mock disponíveis:', mockData.length);
+        
+        // Simular paginação nos dados mock
+        const itemsPerPage = 20;
+        const startIndex = (pageToLoad - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageData = mockData.slice(startIndex, endIndex);
+        
+        console.log('📄 Dados da página', pageToLoad, ':', pageData.length, 'itens');
+        
+        if (reset || pageToLoad === 1) {
+          setNews(pageData);
+        } else {
+          setNews(prev => [...prev, ...pageData]);
+        }
+        
+        // Verificar se há mais páginas nos dados mock
+        setHasMore(endIndex < mockData.length);
         setPage(pageToLoad);
       }
+      
     } catch (error) {
-      if (reset) setNews(getMockNews());
+      console.error('❌ Erro geral ao carregar notícias:', error);
+      setApiStatus('error');
+      
+      // Em caso de erro total, mostrar dados mock básicos
+      const basicMockData = getMockNews().slice(0, 10);
+      setNews(basicMockData);
       setHasMore(false);
     } finally {
       setLoading(false);
     }
-  };
+  };const getMockNews = () => {
+    const newsTemplates = {
+      technology: [
+        {
+          title: "Inteligência Artificial: Nova Era da Automação",
+          description: "As mais recentes inovações em IA estão revolucionando indústrias inteiras, desde a medicina até a fabricação de automóveis.",
+          source: { name: "Tech Innovation Today" },
+          category: "technology",
+          urlToImage: "https://via.placeholder.com/300x150/007bff/ffffff?text=AI+Revolution"
+        },
+        {
+          title: "Realidade Virtual: O Futuro dos Jogos e Trabalho",
+          description: "A tecnologia VR está criando novas possibilidades para entretenimento, educação e colaboração remota.",
+          source: { name: "VR Weekly" },
+          category: "technology",
+          urlToImage: "https://via.placeholder.com/300x150/6f42c1/ffffff?text=VR+Future"
+        },
+        {
+          title: "Computação Quântica: Avanços Surpreendentes",
+          description: "Empresas líderes em tecnologia anunciam descobertas que podem acelerar a era da computação quântica.",
+          source: { name: "Quantum Computing News" },
+          category: "technology",
+          urlToImage: "https://via.placeholder.com/300x150/20c997/ffffff?text=Quantum+Tech"
+        },
+        {
+          title: "Cibersegurança: Novas Ameaças e Soluções",
+          description: "Especialistas alertam para novas vulnerabilidades digitais e apresentam estratégias de proteção avançadas.",
+          source: { name: "CyberSec Today" },
+          category: "technology",
+          urlToImage: "https://via.placeholder.com/300x150/dc3545/ffffff?text=CyberSecurity"
+        }
+      ],
+      business: [
+        {
+          title: "Mercados Globais: Análise Semanal Completa",
+          description: "Principais movimentações financeiras mundiais e suas implicações para investidores e economias locais.",
+          source: { name: "Global Markets Weekly" },
+          category: "business",
+          urlToImage: "https://via.placeholder.com/300x150/28a745/ffffff?text=Global+Markets"
+        },
+        {
+          title: "Startups: Unicórnios Emergentes de 2025",
+          description: "Conheça as empresas emergentes que estão redefinindo setores tradicionais com inovação disruptiva.",
+          source: { name: "Startup Spotlight" },
+          category: "business",
+          urlToImage: "https://via.placeholder.com/300x150/ffc107/000000?text=Startups+2025"
+        },
+        {
+          title: "Sustentabilidade Empresarial em Foco",
+          description: "Como grandes corporações estão implementando práticas sustentáveis para atender demandas ambientais.",
+          source: { name: "Green Business Today" },
+          category: "business",
+          urlToImage: "https://via.placeholder.com/300x150/198754/ffffff?text=Green+Business"
+        }
+      ],
+      health: [
+        {
+          title: "Medicina Personalizada: Revolução na Saúde",
+          description: "Avanços em genética e biotecnologia permitem tratamentos sob medida para cada paciente.",
+          source: { name: "Medical Breakthrough" },
+          category: "health",
+          urlToImage: "https://via.placeholder.com/300x150/0dcaf0/000000?text=Medicine+2025"
+        },
+        {
+          title: "Telemedicina: Cuidados de Saúde Remotos",
+          description: "A tecnologia digital está transformando o acesso aos cuidados de saúde em áreas remotas.",
+          source: { name: "Digital Health News" },
+          category: "health",
+          urlToImage: "https://via.placeholder.com/300x150/6610f2/ffffff?text=Telemedicine"
+        }
+      ],
+      sports: [
+        {
+          title: "Olimpíadas: Preparativos e Expectativas",
+          description: "Atletas de todo o mundo se preparam para os próximos jogos olímpicos com treinos intensivos.",
+          source: { name: "Olympic Sports Today" },
+          category: "sports",
+          urlToImage: "https://via.placeholder.com/300x150/fd7e14/ffffff?text=Olympics+2025"
+        },
+        {
+          title: "Futebol Mundial: Transferências Surpreendentes",
+          description: "O mercado de transferências agita o mundo do futebol com negociações milionárias inesperadas.",
+          source: { name: "Football Transfer News" },
+          category: "sports",
+          urlToImage: "https://via.placeholder.com/300x150/198754/ffffff?text=Football+News"
+        }
+      ],
+      entertainment: [
+        {
+          title: "Cinema: Estreias Aguardadas do Ano",
+          description: "As produções cinematográficas mais esperadas chegam aos cinemas com tecnologia de ponta.",
+          source: { name: "Hollywood Reporter" },
+          category: "entertainment",
+          urlToImage: "https://via.placeholder.com/300x150/e83e8c/ffffff?text=Cinema+2025"
+        },
+        {
+          title: "Streaming: Guerra das Plataformas Continua",
+          description: "Serviços de streaming investem bilhões em conteúdo original para conquistar novos assinantes.",
+          source: { name: "Streaming Wars" },
+          category: "entertainment",
+          urlToImage: "https://via.placeholder.com/300x150/6f42c1/ffffff?text=Streaming+Wars"
+        }
+      ]
+    };
 
-  const getMockNews = () => {
-    const mockArticles = [
-      {
-        title: "Desenvolvimento de Software em 2025: Principais Tendências",
-        description: "As principais tendências e tecnologias que estão moldando o desenvolvimento de software neste ano.",
-        url: "#",
-        urlToImage: "https://via.placeholder.com/300x150/007bff/ffffff?text=Tech+News",
-        publishedAt: new Date().toISOString(),
-        source: { name: "Tech Today" }
-      },
-      {
-        title: "Inteligência Artificial: Impactos na Produtividade",
-        description: "Como a IA está revolucionando a forma como trabalhamos e organizamos nossas tarefas diárias.",
-        url: "#",
-        urlToImage: "https://via.placeholder.com/300x150/28a745/ffffff?text=AI+News",
-        publishedAt: new Date(Date.now() - 3600000).toISOString(),
-        source: { name: "AI Weekly" }
-      },
-      {
-        title: "Gestão de Projetos: Metodologias Ágeis em Foco",
-        description: "As melhores práticas para gerenciamento eficiente de projetos e tarefas em equipes modernas.",
-        url: "#",
-        urlToImage: "https://via.placeholder.com/300x150/ffc107/000000?text=Business",
-        publishedAt: new Date(Date.now() - 7200000).toISOString(),
-        source: { name: "Business Focus" }
-      },
-      {
-        title: "Tecnologia e Produtividade: Ferramentas Essenciais",
-        description: "Descubra as ferramentas mais eficazes para aumentar sua produtividade no trabalho.",
-        url: "#",
-        urlToImage: "https://via.placeholder.com/300x150/dc3545/ffffff?text=Productivity",
-        publishedAt: new Date(Date.now() - 10800000).toISOString(),
-        source: { name: "Productivity Plus" }
+    // Gerar artigos variados
+    const mockArticles = [];
+    const now = Date.now();
+    
+    // Criar 150 artigos (30 por categoria)
+    Object.entries(newsTemplates).forEach(([category, templates]) => {
+      for (let i = 0; i < 30; i++) {
+        templates.forEach((template, templateIndex) => {
+          const variation = Math.floor(i / templates.length) + 1;
+          const article = {
+            ...template,
+            title: `${template.title} - Edição ${variation}`,
+            publishedAt: new Date(now - (i * 2 + templateIndex) * 3600000).toISOString(),
+            url: `#article-${category}-${i}-${templateIndex}`,
+            id: `${category}-${i}-${templateIndex}`
+          };
+          
+          // Adicionar alguma variação na descrição
+          if (variation > 1) {
+            article.description = `${template.description} Nova análise revela insights adicionais sobre este tópico em desenvolvimento.`;
+          }
+          
+          mockArticles.push(article);
+        });
       }
-    ];
+    });
+
+    // Misturar os artigos para variedade
+    mockArticles.sort(() => Math.random() - 0.5);
+    
+    console.log('📊 getMockNews - Categoria selecionada:', selectedCategory);
+    console.log('📈 Total de artigos gerados:', mockArticles.length);
 
     // Filtrar por categoria se não for 'general'
     if (selectedCategory !== 'general') {
-      const categoryMap = {
-        'technology': ['Desenvolvimento', 'Inteligência Artificial', 'Tecnologia'],
-        'business': ['Gestão de Projetos', 'Business'],
-        'sports': ['Esportes', 'Competições'],
-        'health': ['Saúde', 'Bem-estar'],
-        'entertainment': ['Entretenimento', 'Cultura']
-      };
-      
-      const keywords = categoryMap[selectedCategory] || [];
-      if (keywords.length > 0) {
-        return mockArticles.filter(article => 
-          keywords.some(keyword => 
-            article.title.includes(keyword) || article.description.includes(keyword)
-          )
-        );
-      }
+      const filtered = mockArticles.filter(article => article.category === selectedCategory);
+      console.log('🏷️ Artigos filtrados para categoria', selectedCategory, ':', filtered.length);
+      return filtered;
     }
     
+    console.log('📰 Retornando todos os artigos (categoria geral):', mockArticles.length);
     return mockArticles;
   };
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, marginRight: '1rem' }}>📰 Notícias</h3>
-        {userCountry && (
-          <span style={{ 
-            backgroundColor: '#e9ecef', 
+        
+        {/* Indicador de status da API */}
+        <div style={{ 
+          fontSize: '0.7rem', 
+          padding: '0.2rem 0.5rem', 
+          borderRadius: '10px',
+          backgroundColor: 
+            apiStatus === 'working' ? '#d4edda' : 
+            apiStatus === 'error' ? '#f8d7da' : 
+            apiStatus === 'mock' ? '#fff3cd' : '#e2e3e5',
+          color: 
+            apiStatus === 'working' ? '#155724' : 
+            apiStatus === 'error' ? '#721c24' : 
+            apiStatus === 'mock' ? '#856404' : '#6c757d',
+          marginRight: '1rem'
+        }}>
+          {apiStatus === 'working' && '🟢 API Ativa'}
+          {apiStatus === 'error' && '🔴 API Offline'}
+          {apiStatus === 'mock' && '🟡 Dados Demo'}
+          {apiStatus === 'checking' && '🔄 Verificando...'}
+          {apiStatus === 'unknown' && '⚪ Carregando...'}
+        </div>
+          <button 
+          onClick={() => loadNews(1, true)}
+          disabled={loading}
+          style={{ 
+            marginLeft: 'auto',
             padding: '0.25rem 0.5rem', 
-            borderRadius: '12px', 
+            backgroundColor: loading ? '#6c757d' : '#007bff', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-            {userCountry.flag} {userCountry.name}
-          </span>
-        )}
+            marginRight: '0.5rem'
+          }}
+        >
+          {loading ? '🔄 Carregando...' : '🔄 Recarregar'}
+        </button>
+        
+        <button 
+          onClick={() => {
+            if (window.newsService && window.newsService.clearCache) {
+              window.newsService.clearCache();
+              loadNews(1, true);
+            }
+          }}
+          disabled={loading}
+          style={{ 
+            padding: '0.25rem 0.5rem', 
+            backgroundColor: loading ? '#6c757d' : '#6c757d', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: '0.8rem'
+          }}
+        >
+          🗑️ Limpar Cache
+        </button>
       </div>
-        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      
+      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {categories.map(category => (
           <button
             key={category.id}
@@ -725,11 +928,10 @@ function NewsSection({ darkMode = false }) {
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p>Carregando notícias...</p>
         </div>
-      ) : (
-        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
+      ) : (        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
           {news.length > 0 ? (
             news.map((article, index) => (
-              <div key={index} style={{ 
+              <div key={article.id || index} style={{ 
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`, 
                 borderRadius: '8px', 
                 padding: '1rem',
@@ -737,8 +939,20 @@ function NewsSection({ darkMode = false }) {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.5rem',
-                backgroundColor: darkMode ? '#3a3a3a' : 'white'
-              }}>
+                backgroundColor: darkMode ? '#3a3a3a' : 'white',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = darkMode ? '0 4px 12px rgba(255,255,255,0.1)' : '0 4px 12px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onClick={() => article.url !== '#' && window.open(article.url, '_blank')}
+              >
                 {article.urlToImage && (
                   <img 
                     src={article.urlToImage} 
@@ -749,34 +963,108 @@ function NewsSection({ darkMode = false }) {
                       objectFit: 'cover', 
                       borderRadius: '4px'
                     }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
                 )}
                 <div>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: '1.3' }}>                    <a 
-                      href={article.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: 'none', color: darkMode ? '#fff' : '#333' }}
-                    >
-                      {article.title}
-                    </a>
-                  </h4>                  {article.description && (
-                    <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.85rem', lineHeight: '1.4' }}>
-                      {article.description.substring(0, 120)}...
+                  <h4 style={{ 
+                    margin: '0 0 0.5rem 0', 
+                    fontSize: '0.95rem', 
+                    lineHeight: '1.3',
+                    color: darkMode ? '#fff' : '#333'
+                  }}>
+                    {article.title}
+                  </h4>
+                  
+                  {article.description && (
+                    <p style={{ 
+                      margin: '0 0 0.5rem 0', 
+                      color: darkMode ? '#ccc' : '#666', 
+                      fontSize: '0.85rem', 
+                      lineHeight: '1.4' 
+                    }}>
+                      {article.description.length > 150 ? 
+                        `${article.description.substring(0, 150)}...` : 
+                        article.description
+                      }
                     </p>
                   )}
-                  <div style={{ fontSize: '0.75rem', color: darkMode ? '#aaa' : '#999' }}>
-                    {article.source?.name} • {new Date(article.publishedAt).toLocaleDateString('pt-BR')}
+                  
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    fontSize: '0.75rem', 
+                    color: darkMode ? '#aaa' : '#999' 
+                  }}>
+                    <span>
+                      📰 {article.source?.name || 'Fonte não identificada'}
+                    </span>
+                    <span>
+                      🕒 {new Date(article.publishedAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
                   </div>
+                  
+                  {/* Categoria tag */}
+                  {article.category && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      display: 'inline-block',
+                      padding: '0.2rem 0.5rem',
+                      backgroundColor: darkMode ? '#555' : '#f8f9fa',
+                      color: darkMode ? '#fff' : '#6c757d',
+                      borderRadius: '12px',
+                      fontSize: '0.7rem',
+                      textTransform: 'capitalize'
+                    }}>
+                      {categories.find(cat => cat.id === article.category)?.icon || '📰'} {article.category}
+                    </div>
+                  )}
                 </div>
               </div>
             ))          ) : (
             <div style={{ textAlign: 'center', padding: '2rem', color: darkMode ? '#ccc' : '#666' }}>
-              <p>Nenhuma notícia encontrada para esta categoria.</p>
+              <p>📭 Nenhuma notícia encontrada para esta categoria.</p>
+              {apiStatus === 'error' && (
+                <p style={{ fontSize: '0.8rem', marginTop: '1rem' }}>
+                  ⚠️ Problemas de conectividade com a NewsAPI. Mostrando dados de demonstração.
+                </p>
+              )}
             </div>
           )}
-          {loading && <div style={{ textAlign: 'center', padding: '1rem' }}>Carregando mais notícias...</div>}
-          {!hasMore && !loading && <div style={{ textAlign: 'center', padding: '1rem', color: '#aaa' }}>Não há mais notícias.</div>}
+          
+          {loading && news.length > 0 && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '1rem',
+              color: darkMode ? '#ccc' : '#666'
+            }}>
+              🔄 Carregando mais notícias...
+            </div>
+          )}
+          
+          {!hasMore && !loading && news.length > 0 && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '1rem', 
+              color: '#aaa',
+              fontSize: '0.9rem'
+            }}>
+              {apiStatus === 'working' ? (
+                '✅ Você viu todas as notícias disponíveis!'
+              ) : (
+                `📊 ${news.length} notícias carregadas. ${apiStatus === 'mock' ? 'Dados de demonstração.' : ''}`
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -833,9 +1121,7 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
         >
           Atrasadas ({stats.overdue || 0})
         </button>
-      </div>
-
-      {/* Compact Filters */}
+      </div>      {/* Compact Filters */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
         <select
           value={filterStatus}
@@ -859,6 +1145,25 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
           <option value="alta">Alta</option>
           <option value="urgente">Urgente</option>
         </select>
+        
+        <button
+          onClick={() => {
+            setFilterStatus('todas');
+            setFilterPriority('todas');
+          }}
+          style={{
+            padding: '0.25rem 0.5rem',
+            backgroundColor: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          🔄 Reset
+        </button>
       </div>
 
       {/* Compact Tasks List */}
@@ -1419,12 +1724,466 @@ function ProfilePage({ onBack, user, stats }) {
   );
 }
 
+// Componente Sidebar de Tarefas
+function TasksSidebar({ tasks, darkMode, onTaskUpdated }) {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+  const todayTasks = tasks.filter(task => 
+    task.dueDate === today && task.status !== 'concluída'
+  );
+  
+  const upcomingTasks = tasks.filter(task => 
+    task.dueDate > today && task.dueDate <= nextWeek && task.status !== 'concluída'
+  );
+
+  const overdueTasks = tasks.filter(task => 
+    task.dueDate < today && task.status !== 'concluída'
+  );
+
+  const completedToday = tasks.filter(task => 
+    task.status === 'concluída' && 
+    new Date(task.updatedAt || task.createdAt).toISOString().split('T')[0] === today
+  );
+
+  const toggleTaskStatus = async (task) => {
+    const newStatus = task.status === 'concluída' ? 'pendente' : 'concluída';
+    const updatedTask = { ...task, status: newStatus, updatedAt: new Date().toISOString() };
+    onTaskUpdated(updatedTask);
+  };
+
+  const TaskItem = ({ task, isOverdue = false }) => (
+    <div style={{
+      padding: '0.75rem',
+      backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
+      border: `1px solid ${isOverdue ? '#dc3545' : (darkMode ? '#444' : '#e0e0e0')}`,
+      borderRadius: '6px',
+      marginBottom: '0.5rem',
+      borderLeft: `4px solid ${isOverdue ? '#dc3545' : 
+        (task.priority === 'alta' ? '#dc3545' : 
+         task.priority === 'média' ? '#ffc107' : '#28a745')}`
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+        <input
+          type="checkbox"
+          checked={task.status === 'concluída'}
+          onChange={() => toggleTaskStatus(task)}
+          style={{ marginTop: '2px' }}
+        />
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontSize: '0.9rem',
+            fontWeight: '500',
+            color: darkMode ? '#fff' : '#333',
+            textDecoration: task.status === 'concluída' ? 'line-through' : 'none',
+            opacity: task.status === 'concluída' ? 0.6 : 1
+          }}>
+            {task.title}
+          </div>
+          {task.dueDate && (
+            <div style={{
+              fontSize: '0.75rem',
+              color: isOverdue ? '#dc3545' : (darkMode ? '#ccc' : '#666'),
+              marginTop: '2px'
+            }}>
+              📅 {new Date(task.dueDate).toLocaleDateString('pt-PT')}
+            </div>
+          )}
+          {task.category && (
+            <div style={{
+              fontSize: '0.7rem',
+              color: darkMode ? '#999' : '#777',
+              marginTop: '2px'
+            }}>
+              🏷️ {task.category}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Estatísticas rápidas */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '0.5rem',
+          marginBottom: '1rem'
+        }}>
+          <div style={{
+            padding: '0.75rem',
+            backgroundColor: darkMode ? '#2a4d3a' : '#e8f5e8',
+            borderRadius: '6px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: darkMode ? '#4ade80' : '#166534' }}>
+              {completedToday.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: darkMode ? '#86efac' : '#15803d' }}>
+              Concluídas hoje
+            </div>
+          </div>
+          <div style={{
+            padding: '0.75rem',
+            backgroundColor: darkMode ? '#3b2a2a' : '#fef2f2',
+            borderRadius: '6px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: darkMode ? '#f87171' : '#dc2626' }}>
+              {overdueTasks.length}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: darkMode ? '#fca5a5' : '#ef4444' }}>
+              Em atraso
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tarefas em atraso */}
+      {overdueTasks.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h4 style={{ 
+            fontSize: '0.9rem', 
+            fontWeight: 'bold', 
+            color: '#dc3545', 
+            marginBottom: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            ⚠️ Em Atraso ({overdueTasks.length})
+          </h4>
+          {overdueTasks.slice(0, 3).map(task => (
+            <TaskItem key={task._id} task={task} isOverdue={true} />
+          ))}
+          {overdueTasks.length > 3 && (
+            <div style={{ fontSize: '0.8rem', color: darkMode ? '#999' : '#666', textAlign: 'center' }}>
+              +{overdueTasks.length - 3} mais...
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tarefas de hoje */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h4 style={{ 
+          fontSize: '0.9rem', 
+          fontWeight: 'bold', 
+          color: darkMode ? '#fff' : '#333', 
+          marginBottom: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          📅 Hoje ({todayTasks.length})
+        </h4>
+        {todayTasks.length > 0 ? (
+          todayTasks.slice(0, 4).map(task => (
+            <TaskItem key={task._id} task={task} />
+          ))
+        ) : (
+          <div style={{ 
+            fontSize: '0.8rem', 
+            color: darkMode ? '#999' : '#666', 
+            fontStyle: 'italic',
+            textAlign: 'center',
+            padding: '1rem'
+          }}>
+            Nenhuma tarefa para hoje! 🎉
+          </div>
+        )}
+        {todayTasks.length > 4 && (
+          <div style={{ fontSize: '0.8rem', color: darkMode ? '#999' : '#666', textAlign: 'center' }}>
+            +{todayTasks.length - 4} mais...
+          </div>
+        )}
+      </div>
+
+      {/* Próximas tarefas */}
+      <div>
+        <h4 style={{ 
+          fontSize: '0.9rem', 
+          fontWeight: 'bold', 
+          color: darkMode ? '#fff' : '#333', 
+          marginBottom: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          ⏰ Próximos 7 dias ({upcomingTasks.length})
+        </h4>
+        {upcomingTasks.length > 0 ? (
+          upcomingTasks.slice(0, 5).map(task => (
+            <TaskItem key={task._id} task={task} />
+          ))
+        ) : (
+          <div style={{ 
+            fontSize: '0.8rem', 
+            color: darkMode ? '#999' : '#666', 
+            fontStyle: 'italic',
+            textAlign: 'center',
+            padding: '1rem'
+          }}>
+            Nenhuma tarefa próxima
+          </div>
+        )}
+        {upcomingTasks.length > 5 && (
+          <div style={{ fontSize: '0.8rem', color: darkMode ? '#999' : '#666', textAlign: 'center' }}>
+            +{upcomingTasks.length - 5} mais...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente de Agenda
+function AgendaView({ darkMode }) {
+  const [events, setEvents] = React.useState([
+    {
+      id: 1,
+      title: "Reunião de equipe",
+      date: new Date().toISOString().split('T')[0],
+      time: "09:00",
+      description: "Reunião semanal da equipe de desenvolvimento"
+    },
+    {
+      id: 2,
+      title: "Apresentação do projeto",
+      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+      time: "14:30",
+      description: "Apresentação do projeto para o cliente"
+    },
+    {
+      id: 3,
+      title: "Workshop de React",
+      date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+      time: "10:00",
+      description: "Workshop sobre as últimas funcionalidades do React"
+    }
+  ]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayEvents = events.filter(event => event.date === today);
+  const upcomingEvents = events.filter(event => event.date > today);
+
+  return (
+    <div style={{ padding: '1rem' }}>
+      <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>📅 Agenda Pessoal</h3>
+      
+      {/* Eventos de Hoje */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Hoje</h4>
+        {todayEvents.length > 0 ? (
+          todayEvents.map(event => (
+            <div key={event.id} style={{
+              padding: '1rem',
+              backgroundColor: darkMode ? '#3a3a3a' : '#e8f5e8',
+              border: `1px solid ${darkMode ? '#555' : '#c3e6c3'}`,
+              borderRadius: '8px',
+              marginBottom: '0.5rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h5 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>{event.title}</h5>
+                <span style={{ color: darkMode ? '#ccc' : '#666', fontWeight: 'bold' }}>{event.time}</span>
+              </div>
+              <p style={{ margin: '0.5rem 0 0 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
+                {event.description}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p style={{ color: darkMode ? '#999' : '#666', fontStyle: 'italic' }}>
+            Nenhum evento agendado para hoje
+          </p>
+        )}
+      </div>
+
+      {/* Próximos Eventos */}
+      <div>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Próximos Eventos</h4>
+        {upcomingEvents.length > 0 ? (
+          upcomingEvents.map(event => (
+            <div key={event.id} style={{
+              padding: '1rem',
+              backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+              border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+              borderRadius: '8px',
+              marginBottom: '0.5rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h5 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>{event.title}</h5>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
+                    {new Date(event.date).toLocaleDateString('pt-PT')}
+                  </div>
+                  <div style={{ color: darkMode ? '#ccc' : '#666', fontWeight: 'bold' }}>{event.time}</div>
+                </div>
+              </div>
+              <p style={{ margin: '0.5rem 0 0 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
+                {event.description}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p style={{ color: darkMode ? '#999' : '#666', fontStyle: 'italic' }}>
+            Nenhum evento próximo agendado
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Componente de Configurações
+function SettingsView({ darkMode, toggleDarkMode, user }) {
+  const [notifications, setNotifications] = React.useState(true);
+  const [emailUpdates, setEmailUpdates] = React.useState(false);
+  const [newsCategories, setNewsCategories] = React.useState(['technology', 'business']);
+
+  const categories = [
+    { id: 'general', name: 'Geral', icon: '🌍' },
+    { id: 'technology', name: 'Tecnologia', icon: '💻' },
+    { id: 'business', name: 'Negócios', icon: '💼' },
+    { id: 'health', name: 'Saúde', icon: '🏥' },
+    { id: 'science', name: 'Ciência', icon: '🔬' },
+    { id: 'sports', name: 'Desportos', icon: '⚽' },
+    { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
+  ];
+
+  const toggleCategory = (categoryId) => {
+    setNewsCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  return (
+    <div style={{ padding: '1rem', maxWidth: '600px' }}>
+      <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>⚙️ Configurações</h3>
+      
+      {/* Aparência */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Aparência</h4>
+        <div style={{ 
+          padding: '1rem', 
+          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+          borderRadius: '8px'
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={darkMode} 
+              onChange={toggleDarkMode}
+              style={{ marginRight: '0.5rem' }}
+            />
+            <span style={{ color: darkMode ? '#fff' : '#333' }}>Modo escuro</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Notificações */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Notificações</h4>
+        <div style={{ 
+          padding: '1rem', 
+          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+          borderRadius: '8px'
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '0.5rem' }}>
+            <input 
+              type="checkbox" 
+              checked={notifications} 
+              onChange={(e) => setNotifications(e.target.checked)}
+              style={{ marginRight: '0.5rem' }}
+            />
+            <span style={{ color: darkMode ? '#fff' : '#333' }}>Notificações push</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={emailUpdates} 
+              onChange={(e) => setEmailUpdates(e.target.checked)}
+              style={{ marginRight: '0.5rem' }}
+            />
+            <span style={{ color: darkMode ? '#fff' : '#333' }}>Atualizações por email</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Categorias de Notícias */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Categorias de Notícias Favoritas</h4>
+        <div style={{ 
+          padding: '1rem', 
+          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+          borderRadius: '8px'
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
+            {categories.map(category => (
+              <label key={category.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={newsCategories.includes(category.id)} 
+                  onChange={() => toggleCategory(category.id)}
+                  style={{ marginRight: '0.5rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  {category.icon} {category.name}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Informações da Conta */}
+      <div>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Informações da Conta</h4>
+        <div style={{ 
+          padding: '1rem', 
+          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+          borderRadius: '8px'
+        }}>
+          <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#fff' : '#333' }}>
+            <strong>Nome:</strong> {user?.username}
+          </p>
+          <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#fff' : '#333' }}>
+            <strong>Email:</strong> {user?.email}
+          </p>
+          {user?.country && (
+            <p style={{ margin: '0', color: darkMode ? '#fff' : '#333' }}>
+              <strong>País:</strong> {countries.find(c => c.code === user.country)?.flag} {countries.find(c => c.code === user.country)?.name}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
-  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'create', or 'profile'
+  const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
   const [stats, setStats] = React.useState({});
   const [darkMode, setDarkMode] = React.useState(false);
+
+  const menuItems = [
+    { id: 'news', name: 'Notícias', icon: '📰' },
+    { id: 'tasks', name: 'Tarefas', icon: '✅' },
+    { id: 'agenda', name: 'Agenda', icon: '📅' },
+    { id: 'settings', name: 'Configurações', icon: '⚙️' }
+  ];
   React.useEffect(() => {
     loadTasks();
     const userData = authService.getUser();
@@ -1497,120 +2256,224 @@ function Dashboard() {
         stats={stats}
       />
     );
-  }
-  return (
+  }  return (
     <div style={{ 
-      maxWidth: '1400px', 
-      margin: '0 auto', 
-      padding: '1rem',
-      backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+      backgroundColor: darkMode ? '#121212' : '#f5f5f5',
       color: darkMode ? '#ffffff' : '#000000',
       minHeight: '100vh'
     }}>
+      {/* Header fixo */}
       <header style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: '1rem', 
-        paddingBottom: '1rem', 
-        borderBottom: `1px solid ${darkMode ? '#333' : '#ddd'}`,
-        backgroundColor: darkMode ? '#fff' : '#fff',
-        color: '#000',
-        padding: '0.5rem 2rem 1.5rem 2rem', // padding-top reduzido
-        borderRadius: '0',
-        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)',
-        minHeight: '80px',
+        backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+        color: darkMode ? '#ffffff' : '#000000',
+        padding: '0.75rem 2rem',
+        borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        height: '70px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 40, height: 40, marginRight: 10, verticalAlign: 'middle' }} />
-          <span style={{ fontWeight: 700, fontSize: '2.5rem', letterSpacing: '-1px' }}>To-Do List & Notícias</span>
+          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 32, height: 32 }} />
+          <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.5px' }}>Dashboard Pessoal</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <button 
-            onClick={() => setCurrentView('create')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '0.5rem 1.2rem', 
-              backgroundColor: '#00ff22', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: '8px', 
-              fontWeight: 600,
-              fontSize: '1.1rem',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)'
-            }}
-          >
-            <span style={{ fontSize: '1.3rem' }}>➕</span> Nova Tarefa
-          </button>
-          <button 
-            onClick={toggleDarkMode}
-            style={{ 
-              width: 48, height: 48, borderRadius: '50%', border: 'none',
-              background: '#8ba0b2', color: '#fff', fontSize: '1.5rem',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)', cursor: 'pointer'
-            }}
-            title={darkMode ? 'Modo claro' : 'Modo escuro'}
-          >
-            <span style={{ fontSize: '1.5rem' }}>🌙</span>
-          </button>
+        
+        {/* Informações do utilizador */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {user && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem', fontWeight: 500 }}>
-              <span style={{ color: '#7c3aed', fontSize: '1.3rem' }}>👤</span> {user.username}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+              <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
+              <span style={{ fontWeight: 500 }}>{user.username}</span>
               {user.country && (
-                <span style={{ fontSize: '1.1rem', marginLeft: 2 }}>
+                <span style={{ fontSize: '1rem' }}>
                   {countries.find(c => c.code === user.country)?.flag}
                 </span>
               )}
-              <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: 2 }}>PT</span>
-            </span>
+            </div>
           )}
+          
+          <button 
+            onClick={toggleDarkMode}
+            style={{ 
+              width: 40, height: 40, borderRadius: '50%', border: 'none',
+              background: darkMode ? '#333' : '#f0f0f0', 
+              color: darkMode ? '#fff' : '#333', 
+              fontSize: '1.2rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title={darkMode ? 'Modo claro' : 'Modo escuro'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          
           <button 
             onClick={handleLogout}
             style={{ 
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '0.5rem 1.2rem', 
-              backgroundColor: '#ff0033', 
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#dc3545', 
               color: '#fff', 
               border: 'none', 
-              borderRadius: '8px', 
-              fontWeight: 600,
-              fontSize: '1.1rem',
+              borderRadius: '6px', 
+              fontWeight: 500,
+              fontSize: '0.9rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)'
+              transition: 'all 0.2s'
             }}
           >
-            <span style={{ fontSize: '1.3rem' }}>🚪</span> Sair
+            🚪 Sair
           </button>
         </div>
-      </header>      {/* Layout em duas colunas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', height: 'calc(100vh - 150px)' }}>
-        {/* Coluna esquerda - Notícias */}        <div style={{ 
-          overflow: 'hidden',
-          backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
-          padding: '1.5rem',
-          borderRadius: '8px',
-          border: `1px solid ${darkMode ? '#444' : '#ddd'}`
-        }}>
-          <NewsSection darkMode={darkMode} />
-        </div>
+      </header>
 
-        {/* Coluna direita - Dashboard de Tarefas */}
-        <div style={{ 
-          padding: '1rem', 
-          border: `1px solid ${darkMode ? '#444' : '#ddd'}`, 
-          borderRadius: '8px', 
-          backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
-          overflow: 'hidden'
-        }}>
-          <TasksDashboard
-            tasks={tasks}
-            onTaskUpdated={handleTaskUpdated}
-            onTaskDeleted={handleTaskDeleted}
-          />
+      {/* Menu principal horizontal */}
+      <nav style={{
+        position: 'fixed',
+        top: '70px',
+        left: 0,
+        right: 0,
+        zIndex: 999,
+        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
+        borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+        padding: '0 2rem'
+      }}>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setCurrentView(item.id)}
+              style={{
+                padding: '1rem 1.5rem',
+                border: 'none',
+                backgroundColor: currentView === item.id ? (darkMode ? '#007bff' : '#007bff') : 'transparent',
+                color: currentView === item.id ? '#ffffff' : (darkMode ? '#ccc' : '#666'),
+                cursor: 'pointer',
+                borderBottom: currentView === item.id ? '3px solid #007bff' : '3px solid transparent',
+                fontSize: '0.95rem',
+                fontWeight: currentView === item.id ? '600' : '400',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <span>{item.icon}</span>
+              {item.name}
+            </button>
+          ))}
+          
+          <button 
+            onClick={() => setCurrentView('create')}
+            style={{ 
+              marginLeft: 'auto',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.75rem 1.25rem', 
+              backgroundColor: '#28a745', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            ➕ Nova Tarefa
+          </button>
         </div>
-      </div>
+      </nav>
+
+      {/* Conteúdo principal */}
+      <main style={{ 
+        marginTop: '130px', // Espaço para header + nav
+        padding: '1rem 2rem',
+        maxWidth: '1400px',
+        margin: '130px auto 0 auto'
+      }}>
+        {currentView === 'news' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', height: 'calc(100vh - 160px)' }}>
+            {/* Feed de notícias - coluna principal */}
+            <div style={{ 
+              backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+              borderRadius: '12px',
+              border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>📰 Feed de Notícias</h2>
+              </div>
+              <div style={{ height: 'calc(100% - 80px)', overflow: 'hidden' }}>
+                <NewsSection darkMode={darkMode} />
+              </div>
+            </div>
+
+            {/* Sidebar de tarefas */}
+            <div style={{ 
+              backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+              borderRadius: '12px',
+              border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>📋 Tarefas do Dia</h3>
+              </div>
+              <div style={{ height: 'calc(100% - 80px)', overflow: 'auto', padding: '1rem' }}>
+                <TasksSidebar tasks={tasks} darkMode={darkMode} onTaskUpdated={handleTaskUpdated} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'tasks' && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            padding: '2rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <TasksDashboard
+              tasks={tasks}
+              onTaskUpdated={handleTaskUpdated}
+              onTaskDeleted={handleTaskDeleted}
+            />
+          </div>
+        )}
+
+        {currentView === 'agenda' && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            padding: '2rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <AgendaView darkMode={darkMode} />
+          </div>
+        )}
+
+        {currentView === 'settings' && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            padding: '2rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <SettingsView darkMode={darkMode} toggleDarkMode={toggleDarkMode} user={user} />
+          </div>
+        )}
+      </main>
     </div>
   );
 }

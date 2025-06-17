@@ -311,29 +311,29 @@ function TaskForm({ onTaskCreated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <h3>➕ Nova Tarefa</h3>
+    <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
+      <h4 style={{ margin: '0 0 1rem 0' }}>➕ Nova Tarefa</h4>
+      
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.9rem' }}>Título *</label><br />
+        <input
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+          style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
+        />
+      </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
         <div>
-          <label>Título *</label><br />
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
-        </div>
-        
-        <div>
-          <label>Categoria</label><br />
+          <label style={{ fontSize: '0.9rem' }}>Categoria</label><br />
           <select
             name="category"
             value={formData.category}
             onChange={handleChange}
-            style={{ width: '100%', padding: '0.5rem' }}
+            style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
           >
             <option value="pessoal">Pessoal</option>
             <option value="trabalho">Trabalho</option>
@@ -342,27 +342,14 @@ function TaskForm({ onTaskCreated }) {
             <option value="financas">Finanças</option>
           </select>
         </div>
-      </div>
-      
-      <div style={{ marginBottom: '1rem' }}>
-        <label>Descrição</label><br />
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          style={{ width: '100%', padding: '0.5rem', minHeight: '80px' }}
-          placeholder="Descreva sua tarefa..."
-        />
-      </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+        
         <div>
-          <label>Prioridade</label><br />
+          <label style={{ fontSize: '0.9rem' }}>Prioridade</label><br />
           <select
             name="priority"
             value={formData.priority}
             onChange={handleChange}
-            style={{ width: '100%', padding: '0.5rem' }}
+            style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
           >
             <option value="baixa">🟢 Baixa</option>
             <option value="média">🟡 Média</option>
@@ -370,27 +357,38 @@ function TaskForm({ onTaskCreated }) {
             <option value="urgente">🔴 Urgente</option>
           </select>
         </div>
-        
-        <div>
-          <label>Data limite</label><br />
-          <input
-            type="datetime-local"
-            name="dueDate"
-            value={formData.dueDate}
-            onChange={handleChange}
-            style={{ width: '100%', padding: '0.5rem' }}
-          />
-        </div>
       </div>
       
-      <button type="submit" style={{ padding: '0.5rem 1rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.9rem' }}>Descrição</label><br />
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          style={{ width: '100%', padding: '0.5rem', minHeight: '60px', fontSize: '0.9rem' }}
+          placeholder="Descreva sua tarefa..."
+        />
+      </div>
+      
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ fontSize: '0.9rem' }}>Data limite</label><br />
+        <input
+          type="datetime-local"
+          name="dueDate"
+          value={formData.dueDate}
+          onChange={handleChange}
+          style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
+        />
+      </div>
+      
+      <button type="submit" style={{ width: '100%', padding: '0.6rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}>
         Criar Tarefa
       </button>
     </form>
   );
 }
 
-function TaskItem({ task, onTaskUpdated, onTaskDeleted }) {
+function TaskItem({ task, onTaskUpdated, onTaskDeleted, compact = false }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editData, setEditData] = React.useState(task);
 
@@ -442,33 +440,34 @@ function TaskItem({ task, onTaskUpdated, onTaskDeleted }) {
   if (isEditing) {
     return (
       <div style={{ 
-        padding: '1rem', 
+        padding: compact ? '0.5rem' : '1rem', 
         border: '1px solid #ddd', 
         borderRadius: '8px', 
-        marginBottom: '1rem',
-        backgroundColor: '#f8f9fa'
+        marginBottom: compact ? '0.5rem' : '1rem',
+        backgroundColor: '#f8f9fa',
+        fontSize: compact ? '0.9rem' : '1rem'
       }}>
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '0.5rem' }}>
           <input
             type="text"
             value={editData.title}
             onChange={e => setEditData(prev => ({ ...prev, title: e.target.value }))}
-            style={{ width: '100%', padding: '0.5rem' }}
+            style={{ width: '100%', padding: '0.25rem', fontSize: compact ? '0.8rem' : '0.9rem' }}
           />
         </div>
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '0.5rem' }}>
           <textarea
             value={editData.description}
             onChange={e => setEditData(prev => ({ ...prev, description: e.target.value }))}
-            style={{ width: '100%', padding: '0.5rem', minHeight: '60px' }}
+            style={{ width: '100%', padding: '0.25rem', minHeight: compact ? '40px' : '60px', fontSize: compact ? '0.8rem' : '0.9rem' }}
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={handleSaveEdit} style={{ padding: '0.5rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}>
-            Salvar
+        <div style={{ display: 'flex', gap: '0.25rem' }}>
+          <button onClick={handleSaveEdit} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', fontSize: compact ? '0.7rem' : '0.8rem' }}>
+            ✓
           </button>
-          <button onClick={() => setIsEditing(false)} style={{ padding: '0.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px' }}>
-            Cancelar
+          <button onClick={() => setIsEditing(false)} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', fontSize: compact ? '0.7rem' : '0.8rem' }}>
+            ✕
           </button>
         </div>
       </div>
@@ -477,52 +476,56 @@ function TaskItem({ task, onTaskUpdated, onTaskDeleted }) {
 
   return (
     <div style={{ 
-      padding: '1rem', 
+      padding: compact ? '0.5rem' : '1rem', 
       border: `1px solid ${isOverdue ? '#dc3545' : '#ddd'}`, 
       borderRadius: '8px', 
-      marginBottom: '1rem',
+      marginBottom: compact ? '0.5rem' : '1rem',
       backgroundColor: isOverdue ? '#fff5f5' : 'white',
-      opacity: task.status === 'concluída' ? 0.7 : 1
+      opacity: task.status === 'concluída' ? 0.7 : 1,
+      fontSize: compact ? '0.8rem' : '1rem'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
         <h4 style={{ 
           margin: 0, 
           textDecoration: task.status === 'concluída' ? 'line-through' : 'none',
-          color: isOverdue ? '#dc3545' : 'inherit'
+          color: isOverdue ? '#dc3545' : 'inherit',
+          fontSize: compact ? '0.9rem' : '1.1rem',
+          lineHeight: '1.2'
         }}>
           {statusIcons[task.status]} {task.title}
         </h4>
         <span style={{ 
           backgroundColor: priorityColors[task.priority], 
           color: 'white', 
-          padding: '0.25rem 0.5rem', 
+          padding: compact ? '0.125rem 0.25rem' : '0.25rem 0.5rem', 
           borderRadius: '12px', 
-          fontSize: '0.8rem',
-          fontWeight: 'bold'
+          fontSize: compact ? '0.6rem' : '0.8rem',
+          fontWeight: 'bold',
+          flexShrink: 0
         }}>
           {task.priority}
         </span>
       </div>
       
-      {task.description && (
-        <p style={{ margin: '0.5rem 0', color: '#666' }}>{task.description}</p>
+      {task.description && !compact && (
+        <p style={{ margin: '0.25rem 0', color: '#666', fontSize: compact ? '0.7rem' : '0.9rem' }}>{task.description}</p>
       )}
       
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+      <div style={{ display: 'flex', gap: compact ? '0.5rem' : '1rem', marginBottom: compact ? '0.5rem' : '1rem', fontSize: compact ? '0.7rem' : '0.9rem', color: '#666', flexWrap: 'wrap' }}>
         <span>📂 {task.category}</span>
         {task.dueDate && (
           <span style={{ color: isOverdue ? '#dc3545' : 'inherit' }}>
-            ⏰ {new Date(task.dueDate).toLocaleString('pt-BR')}
-            {isOverdue && ' (Atrasada)'}
+            ⏰ {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+            {isOverdue && ' (!)'}
           </span>
         )}
       </div>
       
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
         <select
           value={task.status}
           onChange={e => handleStatusChange(e.target.value)}
-          style={{ padding: '0.25rem', fontSize: '0.9rem' }}
+          style={{ padding: compact ? '0.125rem' : '0.25rem', fontSize: compact ? '0.7rem' : '0.9rem', flex: compact ? 'none' : '1' }}
         >
           <option value="pendente">⏳ Pendente</option>
           <option value="em_progresso">🔄 Em Progresso</option>
@@ -531,16 +534,16 @@ function TaskItem({ task, onTaskUpdated, onTaskDeleted }) {
         
         <button 
           onClick={() => setIsEditing(true)}
-          style={{ padding: '0.25rem 0.5rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.9rem' }}
+          style={{ padding: compact ? '0.125rem 0.25rem' : '0.25rem 0.5rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: compact ? '0.7rem' : '0.9rem' }}
         >
-          ✏️ Editar
+          {compact ? '✏️' : '✏️ Editar'}
         </button>
         
         <button 
           onClick={handleDelete}
-          style={{ padding: '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.9rem' }}
+          style={{ padding: compact ? '0.125rem 0.25rem' : '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', fontSize: compact ? '0.7rem' : '0.9rem' }}
         >
-          🗑️ Deletar
+          {compact ? '🗑️' : '🗑️ Deletar'}
         </button>
       </div>
     </div>
@@ -588,7 +591,7 @@ function NewsSection() {
   };
 
   return (
-    <div style={{ marginTop: '2rem' }}>
+    <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, marginRight: '1rem' }}>📰 Notícias</h3>
         {userCountry && (
@@ -596,12 +599,12 @@ function NewsSection() {
             backgroundColor: '#e9ecef', 
             padding: '0.25rem 0.5rem', 
             borderRadius: '12px', 
-            fontSize: '0.9rem',
+            fontSize: '0.8rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.25rem'
           }}>
-            {userCountry.flag} Priorizadas para {userCountry.name}
+            {userCountry.flag} {userCountry.name}
           </span>
         )}
       </div>
@@ -612,13 +615,13 @@ function NewsSection() {
             key={category.id}
             onClick={() => setSelectedCategory(category.id)}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.4rem 0.8rem',
               border: '1px solid #ddd',
-              borderRadius: '20px',
+              borderRadius: '15px',
               backgroundColor: selectedCategory === category.id ? '#007bff' : 'white',
               color: selectedCategory === category.id ? 'white' : '#333',
               cursor: 'pointer',
-              fontSize: '0.9rem'
+              fontSize: '0.8rem'
             }}
           >
             {category.icon} {category.name}
@@ -631,31 +634,32 @@ function NewsSection() {
           <p>Carregando notícias...</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
           {news.length > 0 ? (
-            news.slice(0, 6).map((article, index) => (
+            news.slice(0, 8).map((article, index) => (
               <div key={index} style={{ 
                 border: '1px solid #ddd', 
                 borderRadius: '8px', 
                 padding: '1rem',
+                marginBottom: '1rem',
                 display: 'flex',
-                gap: '1rem'
+                flexDirection: 'column',
+                gap: '0.5rem'
               }}>
                 {article.urlToImage && (
                   <img 
                     src={article.urlToImage} 
                     alt={article.title}
                     style={{ 
-                      width: '120px', 
-                      height: '80px', 
+                      width: '100%', 
+                      height: '150px', 
                       objectFit: 'cover', 
-                      borderRadius: '4px',
-                      flexShrink: 0
+                      borderRadius: '4px'
                     }}
                   />
                 )}
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: '1.3' }}>
                     <a 
                       href={article.url} 
                       target="_blank" 
@@ -666,11 +670,11 @@ function NewsSection() {
                     </a>
                   </h4>
                   {article.description && (
-                    <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.9rem' }}>
-                      {article.description.substring(0, 150)}...
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                      {article.description.substring(0, 120)}...
                     </p>
                   )}
-                  <div style={{ fontSize: '0.8rem', color: '#999' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#999' }}>
                     {article.source?.name} • {new Date(article.publishedAt).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
@@ -687,32 +691,16 @@ function NewsSection() {
   );
 }
 
-function Dashboard() {
-  const [tasks, setTasks] = React.useState([]);
+function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
   const [filteredTasks, setFilteredTasks] = React.useState([]);
   const [filterStatus, setFilterStatus] = React.useState('todas');
   const [filterPriority, setFilterPriority] = React.useState('todas');
   const [stats, setStats] = React.useState({});
-  const [user, setUser] = React.useState(null);
-
-  React.useEffect(() => {
-    loadTasks();
-    setUser(authService.getUser());
-  }, []);
 
   React.useEffect(() => {
     applyFilters();
+    setStats(tasksService.getStats());
   }, [tasks, filterStatus, filterPriority]);
-
-  const loadTasks = async () => {
-    try {
-      const tasksData = await tasksService.getTasks();
-      setTasks(tasksData);
-      setStats(tasksService.getStats());
-    } catch (error) {
-      console.error('Erro ao carregar tarefas:', error);
-    }
-  };
 
   const applyFilters = () => {
     let filtered = tasks;
@@ -728,21 +716,136 @@ function Dashboard() {
     setFilteredTasks(filtered);
   };
 
+  return (
+    <div>
+      <h3 style={{ marginBottom: '1rem' }}>📋 Dashboard de Tarefas</h3>
+      
+      {/* Mini Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={{ padding: '0.5rem', backgroundColor: '#e3f2fd', borderRadius: '6px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1976d2' }}>{stats.total || 0}</div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Total</div>
+        </div>
+        <div style={{ padding: '0.5rem', backgroundColor: '#fff3e0', borderRadius: '6px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f57c00' }}>{stats.pending || 0}</div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Pendentes</div>
+        </div>
+        <div style={{ padding: '0.5rem', backgroundColor: '#e8f5e8', borderRadius: '6px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#388e3c' }}>{stats.completed || 0}</div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Concluídas</div>
+        </div>
+        <div style={{ padding: '0.5rem', backgroundColor: '#ffebee', borderRadius: '6px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#d32f2f' }}>{stats.overdue || 0}</div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Atrasadas</div>
+        </div>
+      </div>
+
+      {/* Compact Filters */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={{ padding: '0.25rem', fontSize: '0.8rem', flex: 1 }}
+        >
+          <option value="todas">Todos Status</option>
+          <option value="pendente">Pendentes</option>
+          <option value="em_progresso">Em Progresso</option>
+          <option value="concluída">Concluídas</option>
+        </select>
+        
+        <select
+          value={filterPriority}
+          onChange={e => setFilterPriority(e.target.value)}
+          style={{ padding: '0.25rem', fontSize: '0.8rem', flex: 1 }}
+        >
+          <option value="todas">Todas Prioridades</option>
+          <option value="baixa">Baixa</option>
+          <option value="média">Média</option>
+          <option value="alta">Alta</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+
+      {/* Compact Tasks List */}
+      <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+        {filteredTasks.length > 0 ? (
+          filteredTasks.map(task => (
+            <TaskItem
+              key={task._id}
+              task={task}
+              onTaskUpdated={onTaskUpdated}
+              onTaskDeleted={onTaskDeleted}
+              compact={true}
+            />
+          ))
+        ) : (
+          <div style={{ textAlign: 'center', padding: '1rem', color: '#666', fontSize: '0.9rem' }}>
+            <p>Nenhuma tarefa encontrada.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreateTaskPage({ onTaskCreated, onBack }) {
+  return (
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <button 
+          onClick={onBack}
+          style={{ 
+            padding: '0.5rem 1rem', 
+            backgroundColor: '#6c757d', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer',
+            marginBottom: '1rem'
+          }}
+        >
+          ← Voltar
+        </button>
+        <h2>➕ Criar Nova Tarefa</h2>
+      </div>
+      
+      <TaskForm onTaskCreated={onTaskCreated} />
+    </div>
+  );
+}
+
+function Dashboard() {
+  const [tasks, setTasks] = React.useState([]);
+  const [user, setUser] = React.useState(null);
+  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard' or 'create'
+
+  React.useEffect(() => {
+    loadTasks();
+    setUser(authService.getUser());
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const tasksData = await tasksService.getTasks();
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+    }
+  };
+
   const handleTaskCreated = (newTask) => {
     setTasks(prev => [newTask, ...prev]);
-    setStats(tasksService.getStats());
+    setCurrentView('dashboard'); // Volta para o dashboard após criar
   };
 
   const handleTaskUpdated = (updatedTask) => {
     setTasks(prev => prev.map(task => 
       task._id === updatedTask._id ? updatedTask : task
     ));
-    setStats(tasksService.getStats());
   };
 
   const handleTaskDeleted = (taskId) => {
     setTasks(prev => prev.filter(task => task._id !== taskId));
-    setStats(tasksService.getStats());
   };
 
   const handleLogout = () => {
@@ -750,11 +853,40 @@ function Dashboard() {
     window.location.reload();
   };
 
+  if (currentView === 'create') {
+    return (
+      <CreateTaskPage 
+        onTaskCreated={handleTaskCreated}
+        onBack={() => setCurrentView('dashboard')}
+      />
+    );
+  }
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #ddd' }}>
-        <h1>📝 To-Do List & Notícias</h1>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem' }}>
+      <header style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '1rem', 
+        paddingBottom: '1rem', 
+        borderBottom: '1px solid #ddd' 
+      }}>
+        <h1 style={{ margin: 0 }}>📝 To-Do List & Notícias</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => setCurrentView('create')}
+            style={{ 
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#28a745', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer' 
+            }}
+          >
+            ➕ Nova Tarefa
+          </button>
           {user && (
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               👤 {user.username}
@@ -767,89 +899,43 @@ function Dashboard() {
           )}
           <button 
             onClick={handleLogout}
-            style={{ padding: '0.5rem 1rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+            style={{ 
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#dc3545', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer' 
+            }}
           >
             🚪 Sair
           </button>
         </div>
       </header>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div style={{ padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '8px', textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#1976d2' }}>📊 Total</h3>
-          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.total || 0}</p>
+      {/* Layout em duas colunas */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', height: 'calc(100vh - 150px)' }}>
+        {/* Coluna esquerda - Notícias */}
+        <div style={{ overflow: 'hidden' }}>
+          <NewsSection />
         </div>
-        <div style={{ padding: '1rem', backgroundColor: '#fff3e0', borderRadius: '8px', textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#f57c00' }}>⏳ Pendentes</h3>
-          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.pending || 0}</p>
-        </div>
-        <div style={{ padding: '1rem', backgroundColor: '#e8f5e8', borderRadius: '8px', textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#388e3c' }}>✅ Concluídas</h3>
-          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.completed || 0}</p>
-        </div>
-        <div style={{ padding: '1rem', backgroundColor: '#ffebee', borderRadius: '8px', textAlign: 'center' }}>
-          <h3 style={{ margin: '0 0 0.5rem 0', color: '#d32f2f' }}>🔥 Atrasadas</h3>
-          <p style={{ margin: 0, fontSize: '2rem', fontWeight: 'bold' }}>{stats.overdue || 0}</p>
+
+        {/* Coluna direita - Dashboard de Tarefas */}
+        <div style={{ 
+          padding: '1rem', 
+          border: '1px solid #ddd', 
+          borderRadius: '8px', 
+          backgroundColor: '#f8f9fa',
+          overflow: 'hidden'
+        }}>
+          <TasksDashboard
+            tasks={tasks}
+            onTaskUpdated={handleTaskUpdated}
+            onTaskDeleted={handleTaskDeleted}
+          />
         </div>
       </div>
-
-      <TaskForm onTaskCreated={handleTaskCreated} />
-
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Status:</label>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: '0.5rem' }}
-          >
-            <option value="todas">Todas</option>
-            <option value="pendente">Pendentes</option>
-            <option value="em_progresso">Em Progresso</option>
-            <option value="concluída">Concluídas</option>
-          </select>
-        </div>
-        
-        <div>
-          <label style={{ marginRight: '0.5rem' }}>Prioridade:</label>
-          <select
-            value={filterPriority}
-            onChange={e => setFilterPriority(e.target.value)}
-            style={{ padding: '0.5rem' }}
-          >
-            <option value="todas">Todas</option>
-            <option value="baixa">Baixa</option>
-            <option value="média">Média</option>
-            <option value="alta">Alta</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Tasks List */}
-      <div>
-        <h3>📋 Suas Tarefas ({filteredTasks.length})</h3>
-        {filteredTasks.length > 0 ? (
-          filteredTasks.map(task => (
-            <TaskItem
-              key={task._id}
-              task={task}
-              onTaskUpdated={handleTaskUpdated}
-              onTaskDeleted={handleTaskDeleted}
-            />
-          ))
-        ) : (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            <p>Nenhuma tarefa encontrada com os filtros selecionados.</p>
-          </div>
-        )}
-      </div>
-
-      <NewsSection />
-    </div>
-  );
+    </div>  );
 }
 
 function App() {

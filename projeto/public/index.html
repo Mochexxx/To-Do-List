@@ -814,20 +814,549 @@ function CreateTaskPage({ onTaskCreated, onBack }) {
   );
 }
 
+function ProfilePage({ onBack, user, stats }) {
+  const [activeSection, setActiveSection] = React.useState('info');
+  const [userInfo, setUserInfo] = React.useState({
+    username: user.username || '',
+    email: user.email || '',
+    profileImage: user.profileImage || '',
+    language: user.language || 'pt',
+    timezone: user.timezone || 'Europe/Lisbon',
+    notifications: user.notifications !== false,
+    defaultPriority: user.defaultPriority || 'média'
+  });
+  const [passwordData, setPasswordData] = React.useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [message, setMessage] = React.useState('');
+
+  const sections = [
+    { id: 'info', name: '👤 Informações', icon: '👤' },
+    { id: 'security', name: '🔐 Segurança', icon: '🔐' },
+    { id: 'preferences', name: '⚙️ Preferências', icon: '⚙️' },
+    { id: 'actions', name: '🗑️ Ações', icon: '🗑️' }
+  ];
+
+  const handleUserInfoUpdate = async () => {
+    try {
+      await authService.updateUserInfo(userInfo);
+      setMessage('Informações atualizadas com sucesso!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      setMessage('Erro ao atualizar informações: ' + error.message);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage('As senhas não coincidem');
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      setMessage('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    try {
+      await authService.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      setMessage('Senha alterada com sucesso!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      setMessage('Erro ao alterar senha: ' + error.message);
+    }
+  };
+
+  const handleLogoutAll = async () => {
+    if (confirm('Tem certeza que deseja terminar todas as sessões?')) {
+      try {
+        // Simulate logout all sessions - in a real app this would call the backend
+        authService.logout();
+        setMessage('Todas as sessões foram terminadas. Você será redirecionado...');
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (error) {
+        setMessage('Erro ao terminar sessões: ' + error.message);
+      }
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      setMessage('Arquivo muito grande. Máximo 5MB permitido.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setMessage('Por favor, selecione apenas arquivos de imagem.');
+      return;
+    }
+
+    try {
+      // Convert file to base64 for storage
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Image = e.target.result;
+        const updatedUserInfo = { ...userInfo, profileImage: base64Image };
+        setUserInfo(updatedUserInfo);
+        
+        // Save to database
+        await authService.updateUserInfo(updatedUserInfo);
+        setMessage('Foto de perfil atualizada com sucesso!');
+        setTimeout(() => setMessage(''), 3000);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setMessage('Erro ao fazer upload da imagem: ' + error.message);
+    }
+  };
+
+  const handleExportData = async (format) => {
+    try {
+      const data = await tasksService.exportData(format);
+      const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tasks_export_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage(`Dados exportados em ${format.toUpperCase()}!`);
+    } catch (error) {
+      setMessage('Erro ao exportar dados: ' + error.message);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmation = prompt('Para confirmar a eliminação da conta, digite "ELIMINAR":');
+    if (confirmation === 'ELIMINAR') {
+      try {
+        // Delete all user data from localStorage (simulating database deletion)
+        await authService.deleteAccount();
+        
+        // Clear all stored data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('tasks');
+        
+        alert('Conta eliminada com sucesso!');
+        window.location.reload();
+      } catch (error) {
+        setMessage('Erro ao eliminar conta: ' + error.message);
+      }
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <button 
+          onClick={onBack}
+          style={{ 
+            padding: '0.5rem 1rem', 
+            backgroundColor: '#6c757d', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer',
+            marginBottom: '1rem'
+          }}
+        >
+          ← Voltar
+        </button>
+        <h2>👤 Perfil do Utilizador</h2>
+      </div>
+
+      {message && (
+        <div style={{ 
+          padding: '1rem', 
+          marginBottom: '1rem', 
+          backgroundColor: message.includes('Erro') ? '#ffebee' : '#e8f5e8',
+          color: message.includes('Erro') ? '#d32f2f' : '#388e3c',
+          border: `1px solid ${message.includes('Erro') ? '#d32f2f' : '#388e3c'}`,
+          borderRadius: '4px'
+        }}>
+          {message}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem' }}>
+        {/* Sidebar Navigation */}
+        <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderRadius: '8px', height: 'fit-content' }}>
+          {sections.map(section => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '0.5rem',
+                backgroundColor: activeSection === section.id ? '#007bff' : 'transparent',
+                color: activeSection === section.id ? 'white' : '#333',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '0.9rem'
+              }}
+            >
+              {section.icon} {section.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Area */}
+        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', border: '1px solid #ddd' }}>          {/* Informações do Utilizador */}
+          {activeSection === 'info' && (
+            <div>
+              <h3>👤 Informações do Utilizador</h3>
+              
+              <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Nome</label>
+                  <input
+                    type="text"
+                    value={userInfo.username}
+                    onChange={e => setUserInfo(prev => ({ ...prev, username: e.target.value }))}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Email</label>
+                  <input
+                    type="email"
+                    value={userInfo.email}
+                    onChange={e => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Foto de perfil</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {userInfo.profileImage && (
+                      <img 
+                        src={userInfo.profileImage} 
+                        alt="Perfil atual" 
+                        style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #ddd' }}
+                      />
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        style={{ marginBottom: '0.5rem' }}
+                      />
+                      <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                        Máximo 5MB. Formatos: JPG, PNG, GIF
+                      </div>
+                      {userInfo.profileImage && (
+                        <button
+                          type="button"
+                          onClick={() => setUserInfo(prev => ({ ...prev, profileImage: '' }))}
+                          style={{ 
+                            marginTop: '0.5rem',
+                            padding: '0.25rem 0.5rem', 
+                            backgroundColor: '#dc3545', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          🗑️ Remover foto
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Data de registo</label>
+                  <input
+                    type="text"
+                    value={new Date(user.createdAt).toLocaleDateString('pt-PT')}
+                    disabled
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f5f5f5' }}
+                  />
+                </div>
+              </div>
+              
+              <button 
+                onClick={handleUserInfoUpdate}
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  backgroundColor: '#28a745', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  cursor: 'pointer' 
+                }}
+              >
+                💾 Guardar alterações
+              </button>
+            </div>
+          )}          {/* Segurança */}
+          {activeSection === 'security' && (
+            <div>
+              <h3>🔐 Segurança</h3>
+              
+              <div style={{ marginBottom: '2rem' }}>
+                <h4>Alterar palavra-passe</h4>
+                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>Senha atual</label>
+                    <input
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={e => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>Nova senha</label>
+                    <input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem' }}>Confirmar nova senha</label>
+                    <input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={e => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={handlePasswordChange}
+                  style={{ 
+                    padding: '0.5rem 1rem', 
+                    backgroundColor: '#007bff', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  🔐 Alterar senha
+                </button>
+              </div>
+              
+              <div>
+                <h4>Sessões</h4>
+                <p style={{ color: '#666', fontSize: '0.9rem' }}>Termine sua sessão atual em todos os dispositivos.</p>
+                <button 
+                  onClick={handleLogoutAll}
+                  style={{ 
+                    padding: '0.5rem 1rem', 
+                    backgroundColor: '#ffc107', 
+                    color: '#212529', 
+                    border: 'none', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  🚪 Terminar todas as sessões
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Preferências */}
+          {activeSection === 'preferences' && (
+            <div>
+              <h3>⚙️ Preferências</h3>
+              
+              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Idioma</label>
+                  <select
+                    value={userInfo.language}
+                    onChange={e => setUserInfo(prev => ({ ...prev, language: e.target.value }))}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  >
+                    <option value="pt">🇵🇹 Português</option>
+                    <option value="en">🇺🇸 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Fuso horário</label>
+                  <select
+                    value={userInfo.timezone}
+                    onChange={e => setUserInfo(prev => ({ ...prev, timezone: e.target.value }))}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  >
+                    <option value="Europe/Lisbon">🇵🇹 Lisboa (UTC+0/+1)</option>
+                    <option value="America/Sao_Paulo">🇧🇷 São Paulo (UTC-3)</option>
+                    <option value="America/New_York">🇺🇸 Nova York (UTC-5/-4)</option>
+                    <option value="Europe/London">🇬🇧 Londres (UTC+0/+1)</option>
+                    <option value="Europe/Paris">🇫🇷 Paris (UTC+1/+2)</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={userInfo.notifications}
+                      onChange={e => setUserInfo(prev => ({ ...prev, notifications: e.target.checked }))}
+                    />
+                    <span>🔔 Ativar notificações e lembretes</span>
+                  </label>
+                  <small style={{ color: '#666', marginLeft: '1.5rem' }}>
+                    Receba lembretes sobre tarefas próximas do prazo
+                  </small>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Prioridade padrão para novas tarefas</label>
+                  <select
+                    value={userInfo.defaultPriority}
+                    onChange={e => setUserInfo(prev => ({ ...prev, defaultPriority: e.target.value }))}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                  >
+                    <option value="baixa">🟢 Baixa</option>
+                    <option value="média">🟡 Média</option>
+                    <option value="alta">🟠 Alta</option>
+                    <option value="urgente">🔴 Urgente</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button 
+                onClick={handleUserInfoUpdate}
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  backgroundColor: '#28a745', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  cursor: 'pointer',
+                  marginTop: '1.5rem'
+                }}
+              >
+                💾 Guardar preferências
+              </button>
+            </div>
+          )}
+
+          {/* Ações críticas */}
+          {activeSection === 'actions' && (
+            <div>
+              <h3>🗑️ Ações críticas</h3>
+              
+              <div style={{ display: 'grid', gap: '2rem' }}>
+                <div>
+                  <h4>📊 Exportar dados</h4>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                    Baixe todos os seus dados (tarefas, configurações) em formato JSON ou CSV.
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button 
+                      onClick={() => handleExportData('json')}
+                      style={{ 
+                        padding: '0.5rem 1rem', 
+                        backgroundColor: '#17a2b8', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '4px', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      📥 Exportar JSON
+                    </button>
+                    <button 
+                      onClick={() => handleExportData('csv')}
+                      style={{ 
+                        padding: '0.5rem 1rem', 
+                        backgroundColor: '#28a745', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '4px', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      📊 Exportar CSV
+                    </button>
+                  </div>
+                </div>
+                
+                <div style={{ borderTop: '1px solid #ddd', paddingTop: '2rem' }}>
+                  <h4 style={{ color: '#dc3545' }}>⚠️ Zona de perigo</h4>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                    Esta ação não pode ser desfeita. Todos os seus dados serão permanentemente eliminados.
+                  </p>
+                  <button 
+                    onClick={handleDeleteAccount}
+                    style={{ 
+                      padding: '0.75rem 1.5rem', 
+                      backgroundColor: '#dc3545', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '4px', 
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    🗑️ Eliminar conta permanentemente
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
-  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard' or 'create'
-
+  const [currentView, setCurrentView] = React.useState('dashboard'); // 'dashboard', 'create', or 'profile'
+  const [stats, setStats] = React.useState({});
+  const [darkMode, setDarkMode] = React.useState(false);
   React.useEffect(() => {
     loadTasks();
-    setUser(authService.getUser());
+    const userData = authService.getUser();
+    setUser(userData);
+    
+    // Load dark mode preference
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    document.body.style.backgroundColor = savedDarkMode ? '#121212' : '#ffffff';
+    document.body.style.color = savedDarkMode ? '#ffffff' : '#000000';
   }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    
+    // Apply dark mode styles to body
+    document.body.style.backgroundColor = newDarkMode ? '#121212' : '#ffffff';
+    document.body.style.color = newDarkMode ? '#ffffff' : '#000000';
+  };
 
   const loadTasks = async () => {
     try {
       const tasksData = await tasksService.getTasks();
       setTasks(tasksData);
+      setStats(tasksService.getStats());
     } catch (error) {
       console.error('Erro ao carregar tarefas:', error);
     }
@@ -835,6 +1364,7 @@ function Dashboard() {
 
   const handleTaskCreated = (newTask) => {
     setTasks(prev => [newTask, ...prev]);
+    setStats(tasksService.getStats());
     setCurrentView('dashboard'); // Volta para o dashboard após criar
   };
 
@@ -842,12 +1372,14 @@ function Dashboard() {
     setTasks(prev => prev.map(task => 
       task._id === updatedTask._id ? updatedTask : task
     ));
+    setStats(tasksService.getStats());
   };
-
+  
   const handleTaskDeleted = (taskId) => {
     setTasks(prev => prev.filter(task => task._id !== taskId));
+    setStats(tasksService.getStats());
   };
-
+  
   const handleLogout = () => {
     authService.logout();
     window.location.reload();
@@ -862,19 +1394,38 @@ function Dashboard() {
     );
   }
 
+  if (currentView === 'profile') {
+    return (
+      <ProfilePage 
+        onBack={() => setCurrentView('dashboard')}
+        user={user}
+        stats={stats}
+      />
+    );
+  }
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem' }}>
+    <div style={{ 
+      maxWidth: '1400px', 
+      margin: '0 auto', 
+      padding: '1rem',
+      backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+      color: darkMode ? '#ffffff' : '#000000',
+      minHeight: '100vh'
+    }}>
       <header style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
         marginBottom: '1rem', 
         paddingBottom: '1rem', 
-        borderBottom: '1px solid #ddd' 
+        borderBottom: `1px solid ${darkMode ? '#333' : '#ddd'}`,
+        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
+        color: darkMode ? '#ffffff' : '#000000',
+        padding: '1rem',
+        borderRadius: '8px'
       }}>
         <h1 style={{ margin: 0 }}>📝 To-Do List & Notícias</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>          <button 
             onClick={() => setCurrentView('create')}
             style={{ 
               padding: '0.5rem 1rem', 
@@ -887,15 +1438,59 @@ function Dashboard() {
           >
             ➕ Nova Tarefa
           </button>
+          
+          <button 
+            onClick={toggleDarkMode}
+            style={{ 
+              padding: '0.5rem', 
+              backgroundColor: darkMode ? '#ffc107' : '#6c757d', 
+              color: darkMode ? '#000' : 'white', 
+              border: 'none', 
+              borderRadius: '50%', 
+              cursor: 'pointer',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.2rem'
+            }}
+            title={darkMode ? 'Modo claro' : 'Modo escuro'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+          
           {user && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              👤 {user.username}
+            <button 
+              onClick={() => setCurrentView('profile')}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                background: 'none',
+                border: '1px solid #ddd',
+                borderRadius: '20px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                color: '#333'
+              }}
+            >
+              {user.profileImage ? (
+                <img 
+                  src={user.profileImage} 
+                  alt="Perfil" 
+                  style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                '👤'
+              )}
+              {user.username}
               {user.country && (
                 <span>
                   {countries.find(c => c.code === user.country)?.flag}
                 </span>
               )}
-            </span>
+            </button>
           )}
           <button 
             onClick={handleLogout}
@@ -911,21 +1506,25 @@ function Dashboard() {
             🚪 Sair
           </button>
         </div>
-      </header>
-
-      {/* Layout em duas colunas */}
+      </header>      {/* Layout em duas colunas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', height: 'calc(100vh - 150px)' }}>
         {/* Coluna esquerda - Notícias */}
-        <div style={{ overflow: 'hidden' }}>
+        <div style={{ 
+          overflow: 'hidden',
+          backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
+          padding: '1.5rem',
+          borderRadius: '8px',
+          border: `1px solid ${darkMode ? '#444' : '#ddd'}`
+        }}>
           <NewsSection />
         </div>
 
         {/* Coluna direita - Dashboard de Tarefas */}
         <div style={{ 
           padding: '1rem', 
-          border: '1px solid #ddd', 
+          border: `1px solid ${darkMode ? '#444' : '#ddd'}`, 
           borderRadius: '8px', 
-          backgroundColor: '#f8f9fa',
+          backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
           overflow: 'hidden'
         }}>
           <TasksDashboard
@@ -935,7 +1534,8 @@ function Dashboard() {
           />
         </div>
       </div>
-    </div>  );
+    </div>
+  );
 }
 
 function App() {

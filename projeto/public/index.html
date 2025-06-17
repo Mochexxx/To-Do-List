@@ -550,7 +550,7 @@ function TaskItem({ task, onTaskUpdated, onTaskDeleted, compact = false }) {
   );
 }
 
-function NewsSection() {
+function NewsSection({ darkMode = false }) {
   const [news, setNews] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedCategory, setSelectedCategory] = React.useState('general');
@@ -575,19 +575,95 @@ function NewsSection() {
 
   React.useEffect(() => {
     loadNews();
-  }, [selectedCategory, userCountry]);
-
-  const loadNews = async () => {
+  }, [selectedCategory, userCountry]);  const loadNews = async () => {
     setLoading(true);
     try {
       const countryCode = userCountry?.newsCode || 'us';
+      console.log('Carregando notícias:', { selectedCategory, countryCode });
+      
+      // Check if newsService is available
+      if (!window.newsService) {
+        console.error('newsService não está disponível');
+        setNews(getMockNews());
+        return;
+      }
+      
       const articles = await newsService.getNewsByCategory(selectedCategory, countryCode);
-      setNews(articles);
+      console.log('Artigos carregados:', articles);
+      
+      // Se não há artigos, usar dados mockados
+      if (!articles || articles.length === 0) {
+        console.log('Nenhum artigo encontrado, usando dados mockados');
+        setNews(getMockNews());
+      } else {
+        setNews(articles);
+      }
     } catch (error) {
       console.error('Erro ao carregar notícias:', error);
+      console.log('Usando dados mockados devido ao erro');
+      setNews(getMockNews());
     } finally {
       setLoading(false);
     }
+  };
+
+  const getMockNews = () => {
+    const mockArticles = [
+      {
+        title: "Desenvolvimento de Software em 2025: Principais Tendências",
+        description: "As principais tendências e tecnologias que estão moldando o desenvolvimento de software neste ano.",
+        url: "#",
+        urlToImage: "https://via.placeholder.com/300x150/007bff/ffffff?text=Tech+News",
+        publishedAt: new Date().toISOString(),
+        source: { name: "Tech Today" }
+      },
+      {
+        title: "Inteligência Artificial: Impactos na Produtividade",
+        description: "Como a IA está revolucionando a forma como trabalhamos e organizamos nossas tarefas diárias.",
+        url: "#",
+        urlToImage: "https://via.placeholder.com/300x150/28a745/ffffff?text=AI+News",
+        publishedAt: new Date(Date.now() - 3600000).toISOString(),
+        source: { name: "AI Weekly" }
+      },
+      {
+        title: "Gestão de Projetos: Metodologias Ágeis em Foco",
+        description: "As melhores práticas para gerenciamento eficiente de projetos e tarefas em equipes modernas.",
+        url: "#",
+        urlToImage: "https://via.placeholder.com/300x150/ffc107/000000?text=Business",
+        publishedAt: new Date(Date.now() - 7200000).toISOString(),
+        source: { name: "Business Focus" }
+      },
+      {
+        title: "Tecnologia e Produtividade: Ferramentas Essenciais",
+        description: "Descubra as ferramentas mais eficazes para aumentar sua produtividade no trabalho.",
+        url: "#",
+        urlToImage: "https://via.placeholder.com/300x150/dc3545/ffffff?text=Productivity",
+        publishedAt: new Date(Date.now() - 10800000).toISOString(),
+        source: { name: "Productivity Plus" }
+      }
+    ];
+
+    // Filtrar por categoria se não for 'general'
+    if (selectedCategory !== 'general') {
+      const categoryMap = {
+        'technology': ['Desenvolvimento', 'Inteligência Artificial', 'Tecnologia'],
+        'business': ['Gestão de Projetos', 'Business'],
+        'sports': ['Esportes', 'Competições'],
+        'health': ['Saúde', 'Bem-estar'],
+        'entertainment': ['Entretenimento', 'Cultura']
+      };
+      
+      const keywords = categoryMap[selectedCategory] || [];
+      if (keywords.length > 0) {
+        return mockArticles.filter(article => 
+          keywords.some(keyword => 
+            article.title.includes(keyword) || article.description.includes(keyword)
+          )
+        );
+      }
+    }
+    
+    return mockArticles;
   };
 
   return (
@@ -608,18 +684,17 @@ function NewsSection() {
           </span>
         )}
       </div>
-      
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {categories.map(category => (
           <button
             key={category.id}
             onClick={() => setSelectedCategory(category.id)}
             style={{
               padding: '0.4rem 0.8rem',
-              border: '1px solid #ddd',
+              border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
               borderRadius: '15px',
-              backgroundColor: selectedCategory === category.id ? '#007bff' : 'white',
-              color: selectedCategory === category.id ? 'white' : '#333',
+              backgroundColor: selectedCategory === category.id ? '#007bff' : (darkMode ? '#3a3a3a' : 'white'),
+              color: selectedCategory === category.id ? 'white' : (darkMode ? '#fff' : '#333'),
               cursor: 'pointer',
               fontSize: '0.8rem'
             }}
@@ -635,16 +710,16 @@ function NewsSection() {
         </div>
       ) : (
         <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
-          {news.length > 0 ? (
-            news.slice(0, 8).map((article, index) => (
+          {news.length > 0 ? (            news.slice(0, 8).map((article, index) => (
               <div key={index} style={{ 
-                border: '1px solid #ddd', 
+                border: `1px solid ${darkMode ? '#555' : '#ddd'}`, 
                 borderRadius: '8px', 
                 padding: '1rem',
                 marginBottom: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                backgroundColor: darkMode ? '#3a3a3a' : 'white'
               }}>
                 {article.urlToImage && (
                   <img 
@@ -659,29 +734,26 @@ function NewsSection() {
                   />
                 )}
                 <div>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: '1.3' }}>
-                    <a 
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: '1.3' }}>                    <a 
                       href={article.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      style={{ textDecoration: 'none', color: '#333' }}
+                      style={{ textDecoration: 'none', color: darkMode ? '#fff' : '#333' }}
                     >
                       {article.title}
                     </a>
-                  </h4>
-                  {article.description && (
-                    <p style={{ margin: '0 0 0.5rem 0', color: '#666', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                  </h4>                  {article.description && (
+                    <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.85rem', lineHeight: '1.4' }}>
                       {article.description.substring(0, 120)}...
                     </p>
                   )}
-                  <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                  <div style={{ fontSize: '0.75rem', color: darkMode ? '#aaa' : '#999' }}>
                     {article.source?.name} • {new Date(article.publishedAt).toLocaleDateString('pt-BR')}
                   </div>
                 </div>
               </div>
-            ))
-          ) : (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            ))          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem', color: darkMode ? '#ccc' : '#666' }}>
               <p>Nenhuma notícia encontrada para esta categoria.</p>
             </div>
           )}
@@ -1508,15 +1580,14 @@ function Dashboard() {
         </div>
       </header>      {/* Layout em duas colunas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem', height: 'calc(100vh - 150px)' }}>
-        {/* Coluna esquerda - Notícias */}
-        <div style={{ 
+        {/* Coluna esquerda - Notícias */}        <div style={{ 
           overflow: 'hidden',
           backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
           padding: '1.5rem',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#444' : '#ddd'}`
         }}>
-          <NewsSection />
+          <NewsSection darkMode={darkMode} />
         </div>
 
         {/* Coluna direita - Dashboard de Tarefas */}

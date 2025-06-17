@@ -1,0 +1,40 @@
+✅ Funcionalidades Principais
+1. Autenticação (Login/Registo)
+Criar conta com email e password
+
+Iniciar sessão
+
+Logout
+
+Autenticação com token (JWT)
+
+2. Gestão de Tarefas
+Criar nova tarefa (com título, descrição, data opcional)
+
+Editar tarefa
+
+Marcar como concluída ou pendente
+
+Apagar tarefa
+
+3. Filtros e Organização
+Ver todas / pendentes / concluídas
+
+Filtrar por data ou ordem alfabética
+
+Pesquisar por nome
+
+4. Interface Responsiva
+Funcionar bem em desktop e mobile
+
+Tema escuro/claro (opcional)
+
+🛠️ Extras futuros (opcionais)
+Prioridade nas tarefas (baixa, média, alta)
+
+Arrastar para reordenar
+
+Notificações por email/local
+
+Modo offline (com localStorage)
+

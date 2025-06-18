@@ -17,17 +17,15 @@ function TaskItem({ task, onEdit, onDelete, onToggleComplete }) {
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
 
-  return (    <div style={{
+  return (
+    <div style={{
       border: '1px solid #ddd',
       borderRadius: '8px',
       padding: '1rem',
       marginBottom: '0.5rem',
-      backgroundColor: task.completed ? '#f1f8e9' : 'white',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      transition: 'all 0.3s ease',
-      opacity: task.completed ? 0.85 : 1,
-      borderLeft: `4px solid ${getPriorityColor(task.priority)}`,
-      transform: task.completed ? 'scale(0.98)' : 'scale(1)'
+      backgroundColor: task.completed ? '#f8f9fa' : 'white',
+      opacity: task.completed ? 0.7 : 1,
+      borderLeft: `4px solid ${getPriorityColor(task.priority)}`
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>

@@ -60,9 +60,6 @@ function TaskList() {
   if (loading) {
     return <div>Carregando tarefas...</div>;
   }
-  // Separar tarefas em completadas e não completadas
-  const completedTasks = tasks.filter(task => task.completed && task.title.toLowerCase().includes(searchTerm.toLowerCase()));
-  const pendingTasks = tasks.filter(task => !task.completed && task.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div>
@@ -76,69 +73,22 @@ function TaskList() {
         gap: '1rem'
       }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button 
-            onClick={() => setFilter('all')}
-            style={{ 
-              padding: '0.75rem 1.5rem',
-              backgroundColor: filter === 'all' ? '#4CAF50' : '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              transition: 'background-color 0.2s'
-            }}
+          <select 
+            value={filter} 
+            onChange={e => setFilter(e.target.value)}
+            style={{ padding: '0.5rem' }}
           >
-            Todas ({tasks.length})
-          </button>
-          
-          <button 
-            onClick={() => setFilter('pending')}
-            style={{ 
-              padding: '0.75rem 1.5rem',
-              backgroundColor: filter === 'pending' ? '#4CAF50' : '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            Pendentes ({pendingTasks.length})
-          </button>
-
-          <button 
-            onClick={() => setFilter('completed')}
-            style={{ 
-              padding: '0.75rem 1.5rem',
-              backgroundColor: filter === 'completed' ? '#4CAF50' : '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              transition: 'background-color 0.2s'
-            }}
-          >
-            Completas ({completedTasks.length})
-          </button>
+            <option value="all">Todas</option>
+            <option value="pending">Pendentes</option>
+            <option value="completed">Concluídas</option>
+          </select>
           
           <input
             type="text"
             placeholder="Buscar tarefas..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            style={{ 
-              padding: '0.75rem',
-              borderRadius: '6px',
-              border: '1px solid #ced4da',
-              minWidth: '200px',
-              fontSize: '1rem'
-            }}
+            style={{ padding: '0.5rem', minWidth: '200px' }}
           />
         </div>
         
@@ -163,10 +113,8 @@ function TaskList() {
           onSave={(newTask) => {
             if (editingTask) {
               setTasks(tasks.map(t => t._id === newTask._id ? newTask : t));
-              alert('Tarefa atualizada com sucesso!');
             } else {
               setTasks([newTask, ...tasks]);
-              alert('Tarefa criada com sucesso!');
             }
             setShowForm(false);
             setEditingTask(null);
@@ -176,79 +124,27 @@ function TaskList() {
             setEditingTask(null);
           }}
         />
-      )}      {/* Tasks List */}
+      )}
+
+      {/* Tasks List */}
       <div>
-        {/* Mostra mensagem se não houver tarefas */}
-        {tasks.length === 0 && (
+        {filteredTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            Nenhuma tarefa encontrada. Crie sua primeira tarefa!
+            {tasks.length === 0 ? 'Nenhuma tarefa encontrada. Crie sua primeira tarefa!' : 'Nenhuma tarefa corresponde aos filtros.'}
           </div>
-        )}
-
-        {/* Mostra tarefas baseado no filtro selecionado */}
-        {tasks.length > 0 && (
-          <>
-            {/* Tarefas Pendentes */}
-            {(filter === 'all' || filter === 'pending') && pendingTasks.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ 
-                  color: '#2E7D32',
-                  borderBottom: '2px solid #2E7D32',
-                  paddingBottom: '0.5rem',
-                  marginBottom: '1rem'
-                }}>
-                  Tarefas Pendentes
-                </h2>
-                {pendingTasks.map(task => (
-                  <TaskItem 
-                    key={task._id}
-                    task={task}
-                    onEdit={(task) => {
-                      setEditingTask(task);
-                      setShowForm(true);
-                    }}
-                    onDelete={handleDeleteTask}
-                    onToggleComplete={handleToggleComplete}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Tarefas Completadas */}
-            {(filter === 'all' || filter === 'completed') && completedTasks.length > 0 && (
-              <div>
-                <h2 style={{ 
-                  color: '#2E7D32',
-                  borderBottom: '2px solid #2E7D32',
-                  paddingBottom: '0.5rem',
-                  marginBottom: '1rem'
-                }}>
-                  Tarefas Completadas
-                </h2>
-                {completedTasks.map(task => (
-                  <TaskItem 
-                    key={task._id}
-                    task={task}
-                    onEdit={(task) => {
-                      setEditingTask(task);
-                      setShowForm(true);
-                    }}
-                    onDelete={handleDeleteTask}
-                    onToggleComplete={handleToggleComplete}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Mensagem quando nenhuma tarefa corresponde aos filtros */}
-            {(filter === 'pending' && pendingTasks.length === 0) || 
-             (filter === 'completed' && completedTasks.length === 0) || 
-             (searchTerm && pendingTasks.length === 0 && completedTasks.length === 0) ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                Nenhuma tarefa corresponde aos filtros.
-              </div>
-            ) : null}
-          </>
+        ) : (
+          filteredTasks.map(task => (
+            <TaskItem 
+              key={task._id}
+              task={task}
+              onEdit={(task) => {
+                setEditingTask(task);
+                setShowForm(true);
+              }}
+              onDelete={handleDeleteTask}
+              onToggleComplete={handleToggleComplete}
+            />
+          ))
         )}
       </div>
     </div>

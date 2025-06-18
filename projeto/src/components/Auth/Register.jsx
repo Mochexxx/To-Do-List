@@ -8,10 +8,6 @@ function RegisterPage() {
   const [captcha, setCaptcha] = useState('');
   const [captchaAnswer, setCaptchaAnswer] = useState(generateCaptcha());
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  // Access authService from global window object
-  const authService = window.authService;
 
   function generateCaptcha() {
     const num1 = Math.floor(Math.random() * 10) + 1;
@@ -32,29 +28,14 @@ function RegisterPage() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };  const handleSubmit = async (e) => {
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      // Enviar dados para o servidor usando authService
-      const response = await authService.register({
-        name: username, // O backend espera 'name', não 'username'
-        email: email,
-        password: password
-      });
-
-      // Se chegou aqui, o registro foi bem-sucedido
+    if (validateForm()) {
+      console.log({ username, email, password });
+      // TODO: integrar authService.register
       alert('Registro realizado com sucesso!');
-      // Redirecionar para a página principal ou login
-      window.location.href = '/';
-      
-    } catch (error) {
-      console.error('Erro no registro:', error);
-      setErrors({ submit: error.message || 'Erro interno do servidor' });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -131,27 +112,11 @@ function RegisterPage() {
             <button type="button" onClick={refreshCaptcha}>🔄</button>
           </div>
           {errors.captcha && <small style={{ color: 'red' }}>{errors.captcha}</small>}
-        </div>        <button 
-          type="submit" 
-          disabled={loading}
-          style={{ 
-            padding: '0.5rem 1rem', 
-            width: '100%',
-            backgroundColor: loading ? '#6c757d' : '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {loading ? 'Registrando...' : 'Registrar'}
-        </button>
+        </div>
 
-        {errors.submit && (
-          <div style={{ color: 'red', marginTop: '1rem', textAlign: 'center' }}>
-            {errors.submit}
-          </div>
-        )}
+        <button type="submit" style={{ padding: '0.5rem 1rem', width: '100%' }}>
+          Registrar
+        </button>
       </form>
     </div>
   );

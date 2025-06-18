@@ -3689,8 +3689,7 @@ function Dashboard() {
       color: darkMode ? '#ffffff' : '#000000',
       minHeight: '100vh'
     }}>
-      {/* Header fixo */}
-      <header style={{ 
+      {/* Header fixo */}      <header style={{ 
         position: 'fixed',
         top: 0,
         left: 0,
@@ -3710,8 +3709,63 @@ function Dashboard() {
           <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 32, height: 32 }} />
           <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.5px' }}>Dashboard Pessoal</span>
         </div>
-          {/* Informações do utilizador */}
+        
+        {/* Botões principais centralizados */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setCurrentView(item.id)}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                backgroundColor: currentView === item.id ? '#007bff' : 'transparent',
+                color: currentView === item.id ? '#ffffff' : (darkMode ? '#ccc' : '#666'),
+                cursor: 'pointer',
+                borderRadius: '6px',
+                fontSize: '0.9rem',
+                fontWeight: currentView === item.id ? '600' : '400',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}
+              onMouseEnter={(e) => {
+                if (currentView !== item.id) {
+                  e.target.style.backgroundColor = darkMode ? '#3a3a3a' : '#f0f0f0';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentView !== item.id) {
+                  e.target.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <span>{item.icon}</span>
+              {item.name}
+            </button>
+          ))}
+        </div>          {/* Informações do utilizador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* Botão Nova Tarefa */}
+          <button 
+            onClick={() => setCurrentView('create')}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#28a745', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            ➕ Nova Tarefa
+          </button>
+          
           {user && (
             <div className="profile-menu-container" style={{ position: 'relative' }}>
               <div 
@@ -3884,73 +3938,15 @@ function Dashboard() {
           >
             {darkMode ? '☀️' : '🌙'}
           </button>
-        </div>
-      </header>
-
-      {/* Menu principal horizontal */}
-      <nav style={{
-        position: 'fixed',
-        top: '70px',
-        left: 0,
-        right: 0,
-        zIndex: 999,
-        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
-        borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
-        padding: '0 2rem'
-      }}>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setCurrentView(item.id)}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                backgroundColor: currentView === item.id ? (darkMode ? '#007bff' : '#007bff') : 'transparent',
-                color: currentView === item.id ? '#ffffff' : (darkMode ? '#ccc' : '#666'),
-                cursor: 'pointer',
-                borderBottom: currentView === item.id ? '3px solid #007bff' : '3px solid transparent',
-                fontSize: '0.95rem',
-                fontWeight: currentView === item.id ? '600' : '400',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <span>{item.icon}</span>
-              {item.name}
-            </button>
-          ))}
-          
-          <button 
-            onClick={() => setCurrentView('create')}
-            style={{ 
-              marginLeft: 'auto',
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.75rem 1.25rem', 
-              backgroundColor: '#28a745', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            ➕ Nova Tarefa
-          </button>
-        </div>
-      </nav>
+        </div>      </header>
 
       {/* Conteúdo principal */}
       <main style={{ 
-        marginTop: '130px', // Espaço para header + nav
+        marginTop: '70px', // Espaço apenas para o header
         padding: '1rem 2rem',
         maxWidth: '1400px',
-        margin: '130px auto 0 auto'
-      }}>        {currentView === 'news' && (
+        margin: '70px auto 0 auto'
+      }}>{currentView === 'news' && (
           <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1rem', height: 'calc(100vh - 90px)' }}>
             {/* Feed de notícias - coluna esquerda (75%) */}
             <div style={{ 

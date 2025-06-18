@@ -25,22 +25,22 @@ const verifyToken = (req, res, next) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, country, countryName, newsCountryCode } = req.body;
+    const { name, email, password, country, countryName, newsCountryCode } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
+      $or: [{ email }, { name }] 
     });
     
     if (existingUser) {
       return res.status(400).json({ 
-        message: 'Username ou email já existem' 
+        message: 'Nome ou email já existem' 
       });
     }
 
     // Create new user with extended profile data
     const user = new User({ 
-      username, 
+      name, 
       email, 
       password,
       country: country || '',
@@ -53,7 +53,7 @@ router.post('/register', async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, username: user.username },
+      { userId: user._id, name: user.name },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -86,11 +86,9 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Credenciais inválidas' });
-    }
-
-    // Generate JWT
+    }    // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, username: user.username },
+      { userId: user._id, name: user.name },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -132,7 +130,7 @@ router.get('/profile', verifyToken, async (req, res) => {
 router.put('/profile', verifyToken, async (req, res) => {
   try {
     const { 
-      username, 
+      name, 
       email, 
       profileImage, 
       country,
@@ -145,13 +143,13 @@ router.put('/profile', verifyToken, async (req, res) => {
       darkMode 
     } = req.body;
 
-    // Verificar se username/email já existem (excluindo o usuário atual)
-    if (username || email) {
+    // Verificar se nome/email já existem (excluindo o usuário atual)
+    if (name || email) {
       const existingUser = await User.findOne({
         $and: [
           { _id: { $ne: req.user.userId } },
           { $or: [
-            ...(username ? [{ username }] : []),
+            ...(name ? [{ name }] : []),
             ...(email ? [{ email }] : [])
           ]}
         ]
@@ -159,14 +157,14 @@ router.put('/profile', verifyToken, async (req, res) => {
 
       if (existingUser) {
         return res.status(400).json({ 
-          message: 'Username ou email já estão em uso por outro usuário' 
+          message: 'Nome ou email já estão em uso por outro usuário' 
         });
       }
     }
 
     // Preparar dados para atualização
     const updateData = {};
-    if (username !== undefined) updateData.username = username;
+    if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (profileImage !== undefined) updateData.profileImage = profileImage;
     if (country !== undefined) updateData.country = country;
@@ -252,16 +250,14 @@ router.delete('/profile', verifyToken, async (req, res) => {
       return res.status(400).json({ 
         message: 'Confirmação inválida. Digite "ELIMINAR" para confirmar.' 
       });
-    }
-
-    // Marcar usuário como inativo em vez de deletar completamente
+    }    // Marcar usuário como inativo em vez de deletar completamente
     // (mantém integridade dos dados relacionados)
     const user = await User.findByIdAndUpdate(
       req.user.userId,
       { 
         isActive: false,
         email: `deleted_${Date.now()}_${req.user.userId}@deleted.com`,
-        username: `deleted_${Date.now()}_${req.user.userId}`
+        name: `deleted_${Date.now()}_${req.user.userId}`
       },
       { new: true }
     );

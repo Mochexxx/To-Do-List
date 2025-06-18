@@ -1546,92 +1546,192 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, setCurrentView })
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0 }}>📋 Dashboard de Tarefas</h3>        <button 
-          onClick={() => setCurrentView('create')}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.3rem',
-            padding: '0.5rem 1rem', 
-            backgroundColor: '#28a745', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '6px', 
-            fontWeight: 600,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-          title="Criar Nova Tarefa"
-        >
-          ➕ Nova Tarefa
-        </button>
+    <div>      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>📋 Dashboard de Tarefas</h3>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={() => {
+              setFilterStatus('atrasada');
+              setFilterPriority('todas');
+            }}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#dc3545', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title="Ver Tarefas Atrasadas"
+          >
+            ⏰ Atrasadas ({stats.overdue || 0})
+          </button>
+          <button 
+            onClick={() => setCurrentView('create')}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#28a745', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '6px', 
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title="Criar Nova Tarefa"
+          >
+            ➕ Nova Tarefa
+          </button>
+        </div>
       </div>
-      
-      {/* Mini Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
-        <button
-          onClick={() => {
-            setFilterStatus('atrasada');
-            setFilteredTasks(tasks.filter(task => task.status === 'atrasada').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)));
-          }}
-          style={{
-            padding: '0.5rem',
-            backgroundColor: '#ffebee',
-            borderRadius: '6px',
-            textAlign: 'center',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            color: '#d32f2f',
-            fontWeight: 'bold'
-          }}
-        >
-          Atrasadas ({stats.overdue || 0})
-        </button>
-      </div>      {/* Compact Filters */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          style={{ padding: '0.25rem', fontSize: '0.8rem', flex: 1 }}
-        >
-          <option value="todas">Todos Status</option>
-          <option value="pendente">Pendentes</option>
-          <option value="em_progresso">Em Progresso</option>
-          <option value="concluída">Concluídas</option>
-        </select>
+
+      {/* Filtros Principais */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gap: '1rem', 
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        border: '1px solid #e9ecef'
+      }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+            📊 Status:
+          </label>
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={{ 
+              width: '100%',
+              padding: '0.5rem', 
+              fontSize: '0.9rem', 
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              backgroundColor: '#fff'
+            }}
+          >
+            <option value="todas">Todos os Status</option>
+            <option value="pendente">📋 Pendentes</option>
+            <option value="em_progresso">🔄 Em Progresso</option>
+            <option value="concluída">✅ Concluídas</option>
+            <option value="atrasada">⏰ Atrasadas</option>
+          </select>
+        </div>
         
-        <select
-          value={filterPriority}
-          onChange={e => setFilterPriority(e.target.value)}
-          style={{ padding: '0.25rem', fontSize: '0.8rem', flex: 1 }}
-        >
-          <option value="todas">Todas Prioridades</option>
-          <option value="baixa">Baixa</option>
-          <option value="média">Média</option>
-          <option value="alta">Alta</option>
-          <option value="urgente">Urgente</option>
-        </select>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
+            🚨 Prioridade:
+          </label>
+          <select
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value)}
+            style={{ 
+              width: '100%',
+              padding: '0.5rem', 
+              fontSize: '0.9rem', 
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              backgroundColor: '#fff'
+            }}
+          >
+            <option value="todas">Todas as Prioridades</option>
+            <option value="baixa">🟢 Baixa</option>
+            <option value="média">🟡 Média</option>
+            <option value="alta">🟠 Alta</option>
+            <option value="urgente">🔴 Urgente</option>
+          </select>
+        </div>
         
-        <button
-          onClick={() => {
-            setFilterStatus('todas');
-            setFilterPriority('todas');
-          }}
-          style={{
-            padding: '0.25rem 0.5rem',
-            backgroundColor: '#6c757d',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          🔄 Reset
-        </button>
+        <div style={{ display: 'flex', alignItems: 'end' }}>
+          <button
+            onClick={() => {
+              setFilterStatus('todas');
+              setFilterPriority('todas');
+            }}
+            style={{
+              width: '100%',
+              padding: '0.5rem 1rem',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+          >
+            🔄 Limpar Filtros
+          </button>
+        </div>
+      </div>
+
+      {/* Estatísticas Rápidas */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+        gap: '0.5rem', 
+        marginBottom: '1rem' 
+      }}>
+        <div style={{
+          padding: '0.75rem',
+          backgroundColor: '#e3f2fd',
+          borderRadius: '6px',
+          textAlign: 'center',
+          border: '1px solid #bbdefb'
+        }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#1976d2' }}>
+            {stats.total || 0}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Total</div>
+        </div>
+        
+        <div style={{
+          padding: '0.75rem',
+          backgroundColor: '#fff3e0',
+          borderRadius: '6px',
+          textAlign: 'center',
+          border: '1px solid #ffcc02'
+        }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f57c00' }}>
+            {stats.pending || 0}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Pendentes</div>
+        </div>
+        
+        <div style={{
+          padding: '0.75rem',
+          backgroundColor: '#ffebee',
+          borderRadius: '6px',
+          textAlign: 'center',
+          border: '1px solid #ffcdd2'
+        }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#d32f2f' }}>
+            {stats.overdue || 0}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Atrasadas</div>
+        </div>
+        
+        <div style={{
+          padding: '0.75rem',
+          backgroundColor: '#e8f5e8',
+          borderRadius: '6px',
+          textAlign: 'center',
+          border: '1px solid #c8e6c9'
+        }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#388e3c' }}>
+            {stats.completed || 0}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>Concluídas</div>
+        </div>
       </div>
 
       {/* Compact Tasks List */}

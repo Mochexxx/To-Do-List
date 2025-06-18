@@ -287,13 +287,13 @@ function RegisterPage({ onSwitchToLogin }) {
   );
 }
 
-function TaskForm({ onTaskCreated }) {
+// Formulário Simples para Criação Rápida de Tarefas
+function SimpleTaskForm({ onTaskCreated, onSwitchToComplete }) {
   const [formData, setFormData] = React.useState({
     title: '',
     description: '',
     priority: 'média',
-    dueDate: '',
-    category: 'pessoal'
+    dueDate: ''
   });
 
   const handleSubmit = async (e) => {
@@ -301,10 +301,15 @@ function TaskForm({ onTaskCreated }) {
     try {
       const task = await tasksService.createTask({
         ...formData,
-        status: 'pendente'
+        category: 'pessoal',
+        status: 'pendente',
+        startDate: '',
+        isRecurrent: false,
+        tags: [],
+        estimatedDuration: ''
       });
       onTaskCreated(task);
-      setFormData({ title: '', description: '', priority: 'média', dueDate: '', category: 'pessoal' });
+      setFormData({ title: '', description: '', priority: 'média', dueDate: '' });
     } catch (error) {
       alert('Erro ao criar tarefa: ' + error.message);
     }
@@ -318,80 +323,474 @@ function TaskForm({ onTaskCreated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f8f9fa' }}>
-      <h4 style={{ margin: '0 0 1rem 0' }}>➕ Nova Tarefa</h4>
-      
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ fontSize: '0.9rem' }}>Título *</label><br />
-        <input
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-          style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
-        />
+    <div style={{ 
+      padding: '1.5rem', 
+      border: '1px solid #e3f2fd', 
+      borderRadius: '12px', 
+      backgroundColor: '#f8fbff',
+      marginBottom: '1rem'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h4 style={{ margin: 0, color: '#1976d2', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          ⚡ Criação Rápida
+        </h4>
+        <button
+          type="button"
+          onClick={onSwitchToComplete}
+          style={{
+            padding: '0.4rem 0.8rem',
+            backgroundColor: '#2196f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          🔧 Modo Completo
+        </button>
       </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-        <div>
-          <label style={{ fontSize: '0.9rem' }}>Categoria</label><br />
-          <select
-            name="category"
-            value={formData.category}
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📝 Título da Tarefa *</label><br />
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
             onChange={handleChange}
-            style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
-          >
-            <option value="pessoal">Pessoal</option>
-            <option value="trabalho">Trabalho</option>
-            <option value="estudos">Estudos</option>
-            <option value="saude">Saúde</option>
-            <option value="financas">Finanças</option>
-          </select>
+            required
+            placeholder="O que você precisa fazer?"
+            style={{ 
+              width: '100%', 
+              padding: '0.75rem', 
+              fontSize: '0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              marginTop: '0.25rem'
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>⏱️ Prioridade</label><br />
+            <select
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            >
+              <option value="baixa">🟢 Baixa</option>
+              <option value="média">🟡 Média</option>
+              <option value="alta">🟠 Alta</option>
+              <option value="urgente">🔴 Urgente</option>
+            </select>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📅 Prazo (opcional)</label><br />
+            <input
+              type="date"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            />
+          </div>
         </div>
         
-        <div>
-          <label style={{ fontSize: '0.9rem' }}>Prioridade</label><br />
-          <select
-            name="priority"
-            value={formData.priority}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📄 Descrição (opcional)</label><br />
+          <textarea
+            name="description"
+            value={formData.description}
             onChange={handleChange}
-            style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
-          >
-            <option value="baixa">🟢 Baixa</option>
-            <option value="média">🟡 Média</option>
-            <option value="alta">🟠 Alta</option>
-            <option value="urgente">🔴 Urgente</option>
-          </select>
+            placeholder="Adicione detalhes sobre a tarefa..."
+            style={{ 
+              width: '100%', 
+              padding: '0.75rem', 
+              minHeight: '80px', 
+              fontSize: '0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              marginTop: '0.25rem',
+              resize: 'vertical'
+            }}
+          />
         </div>
+        
+        <button 
+          type="submit" 
+          style={{ 
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: '#4caf50', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: 'pointer', 
+            fontSize: '1rem',
+            fontWeight: '500',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          ⚡ Criar Tarefa Rápida
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// Formulário Completo para Criação Detalhada de Tarefas
+function CompleteTaskForm({ onTaskCreated, onSwitchToSimple }) {
+  const [formData, setFormData] = React.useState({
+    title: '',
+    description: '',
+    priority: 'média',
+    startDate: '',
+    dueDate: '',
+    category: 'pessoal',
+    status: 'pendente',
+    isRecurrent: false,
+    tags: '',
+    estimatedDuration: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const task = await tasksService.createTask({
+        ...formData,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : []
+      });
+      onTaskCreated(task);
+      setFormData({ 
+        title: '', 
+        description: '', 
+        priority: 'média', 
+        startDate: '',
+        dueDate: '', 
+        category: 'pessoal',
+        status: 'pendente',
+        isRecurrent: false,
+        tags: '',
+        estimatedDuration: ''
+      });
+    } catch (error) {
+      alert('Erro ao criar tarefa: ' + error.message);
+    }
+  };
+
+  const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: value
+    }));
+  };
+
+  return (
+    <div style={{ 
+      padding: '1.5rem', 
+      border: '1px solid #e8f5e8', 
+      borderRadius: '12px', 
+      backgroundColor: '#f9fff9',
+      marginBottom: '1rem'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h4 style={{ margin: 0, color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          🔧 Criação Completa
+        </h4>
+        <button
+          type="button"
+          onClick={onSwitchToSimple}
+          style={{
+            padding: '0.4rem 0.8rem',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          ⚡ Modo Rápido
+        </button>
       </div>
-      
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ fontSize: '0.9rem' }}>Descrição</label><br />
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          style={{ width: '100%', padding: '0.5rem', minHeight: '60px', fontSize: '0.9rem' }}
-          placeholder="Descreva sua tarefa..."
-        />
-      </div>
-      
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ fontSize: '0.9rem' }}>Data limite</label><br />
-        <input
-          type="datetime-local"
-          name="dueDate"
-          value={formData.dueDate}
-          onChange={handleChange}
-          style={{ width: '100%', padding: '0.5rem', fontSize: '0.9rem' }}
-        />
-      </div>
-      
-      <button type="submit" style={{ width: '100%', padding: '0.6rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}>
-        Criar Tarefa
-      </button>
-    </form>
+
+      <form onSubmit={handleSubmit}>
+        {/* Título */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📝 Título *</label><br />
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            required
+            placeholder="Digite o título da tarefa"
+            style={{ 
+              width: '100%', 
+              padding: '0.75rem', 
+              fontSize: '0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              marginTop: '0.25rem'
+            }}
+          />
+        </div>
+
+        {/* Categoria e Prioridade */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📱 Categoria</label><br />
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            >
+              <option value="pessoal">📱 Pessoal</option>
+              <option value="trabalho">💼 Trabalho</option>
+              <option value="estudos">📚 Estudos</option>
+              <option value="saude">🏥 Saúde</option>
+              <option value="financas">💰 Finanças</option>
+            </select>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>⏱️ Prioridade</label><br />
+            <select
+              name="priority"
+              value={formData.priority}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            >
+              <option value="baixa">🟢 Baixa</option>
+              <option value="média">🟡 Média</option>
+              <option value="alta">🟠 Alta</option>
+              <option value="urgente">🔴 Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Datas */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📅 Data de Início</label><br />
+            <input
+              type="date"
+              name="startDate"
+              value={formData.startDate}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            />
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📅 Data de Prazo</label><br />
+            <input
+              type="datetime-local"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Estado e Duração */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>✅ Estado</label><br />
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            >
+              <option value="pendente">⏳ Pendente</option>
+              <option value="em progresso">🔄 Em Progresso</option>
+              <option value="concluída">✅ Concluída</option>
+            </select>
+          </div>
+          
+          <div>
+            <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>🕒 Duração Estimada</label><br />
+            <select
+              name="estimatedDuration"
+              value={formData.estimatedDuration}
+              onChange={handleChange}
+              style={{ 
+                width: '100%', 
+                padding: '0.75rem', 
+                fontSize: '0.9rem',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                marginTop: '0.25rem'
+              }}
+            >
+              <option value="">Selecionar...</option>
+              <option value="15min">⚡ 15 minutos</option>
+              <option value="30min">🕑 30 minutos</option>
+              <option value="1h">🕐 1 hora</option>
+              <option value="2h">🕑 2 horas</option>
+              <option value="4h">🕓 4 horas</option>
+              <option value="8h">🕗 8 horas (1 dia)</option>
+              <option value="1d+">📅 Mais de 1 dia</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Descrição */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📄 Descrição</label><br />
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Descreva os detalhes da tarefa..."
+            style={{ 
+              width: '100%', 
+              padding: '0.75rem', 
+              minHeight: '100px', 
+              fontSize: '0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              marginTop: '0.25rem',
+              resize: 'vertical'
+            }}
+          />
+        </div>
+
+        {/* Etiquetas */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '500' }}>📌 Etiquetas (separadas por vírgula)</label><br />
+          <input
+            type="text"
+            name="tags"
+            value={formData.tags}
+            onChange={handleChange}
+            placeholder="ex: urgente, trabalho, reunião"
+            style={{ 
+              width: '100%', 
+              padding: '0.75rem', 
+              fontSize: '0.9rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              marginTop: '0.25rem'
+            }}
+          />
+        </div>
+
+        {/* Recorrente */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500' }}>
+            <input 
+              type="checkbox" 
+              name="isRecurrent"
+              checked={formData.isRecurrent} 
+              onChange={handleChange}
+              style={{ marginRight: '0.5rem', transform: 'scale(1.2)' }}
+            />
+            <span>🔁 Tarefa Recorrente</span>
+          </label>
+          <small style={{ color: '#666', fontSize: '0.8rem', marginLeft: '1.7rem' }}>
+            Marque se esta tarefa se repete regularmente
+          </small>
+        </div>
+        
+        <button 
+          type="submit" 
+          style={{ 
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: '#2e7d32', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: 'pointer', 
+            fontSize: '1rem',
+            fontWeight: '500',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          🔧 Criar Tarefa Completa
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function TaskForm({ onTaskCreated }) {
+  const [isSimpleMode, setIsSimpleMode] = React.useState(true);
+
+  if (isSimpleMode) {
+    return (
+      <SimpleTaskForm 
+        onTaskCreated={onTaskCreated} 
+        onSwitchToComplete={() => setIsSimpleMode(false)} 
+      />
+    );
+  }
+
+  return (
+    <CompleteTaskForm 
+      onTaskCreated={onTaskCreated} 
+      onSwitchToSimple={() => setIsSimpleMode(true)} 
+    />
   );
 }
 

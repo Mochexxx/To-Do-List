@@ -185,11 +185,11 @@ const authService = {
       
       return response;
     } catch (error) {
-      console.error('Backend registration failed:', error);
-      // Fallback to offline mode only if backend completely fails
+      console.error('Backend registration failed:', error);      // Fallback to offline mode only if backend completely fails
       const user = {
         id: Date.now().toString(),
-        username: userData.username,
+        name: userData.username, // Use 'name' field to match backend structure
+        username: userData.username, // Keep username for backward compatibility
         email: userData.email,
         country: userData.country,
         countryName: userData.countryName,
@@ -319,11 +319,19 @@ const authService = {
   },
   async updateUserInfo(userData) {
     try {
-      if (this.isOnlineMode) {
-        // Modo online - usar backend real
+      if (this.isOnlineMode) {        // Modo online - usar backend real
+        const requestBody = {
+          ...userData
+        };
+        
+        // Mapear username para name se necessário para o backend
+        if (userData.username) {
+          requestBody.name = userData.username;
+        }
+        
         const response = await makeRequest(`${API_BASE_URL}/auth/profile`, {
           method: 'PUT',
-          body: JSON.stringify(userData)
+          body: JSON.stringify(requestBody)
         });
 
         // Atualizar dados locais com a resposta do servidor
@@ -362,12 +370,11 @@ const authService = {
         const currentUser = this.getUser();
         if (!currentUser) {
           throw new Error('Usuário não encontrado');
-        }
-
-        // Atualizar dados do usuário
+        }        // Atualizar dados do usuário
         const updatedUser = {
           ...currentUser,
-          username: userData.username || currentUser.username,
+          name: userData.username || currentUser.name || currentUser.username,
+          username: userData.username || currentUser.username || currentUser.name,
           email: userData.email || currentUser.email,
           profileImage: userData.profileImage !== undefined ? userData.profileImage : currentUser.profileImage,
           country: userData.country || currentUser.country,

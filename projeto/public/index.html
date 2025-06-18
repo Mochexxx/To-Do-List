@@ -1941,9 +1941,8 @@ function CreateTaskPage({ onTaskCreated, onBack }) {
 }
 
 function ProfilePage({ onBack, user, stats }) {
-  const [activeSection, setActiveSection] = React.useState('info');
-  const [userInfo, setUserInfo] = React.useState({
-    username: user.username || '',
+  const [activeSection, setActiveSection] = React.useState('info');  const [userInfo, setUserInfo] = React.useState({
+    username: user.name || user.username || '',
     email: user.email || '',
     profileImage: user.profileImage || '',
     language: user.language || 'pt',
@@ -4306,9 +4305,8 @@ function Dashboard() {
                     e.target.style.backgroundColor = 'transparent';
                   }
                 }}
-              >
-                <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
-                <span style={{ fontWeight: 500 }}>{user.username}</span>
+              >                <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
+                <span style={{ fontWeight: 500 }}>{user.name || user.username}</span>
                 {user.country && (
                   <span style={{ fontSize: '1rem' }}>
                     {countries.find(c => c.code === user.country)?.flag}
@@ -4333,9 +4331,8 @@ function Dashboard() {
                   minWidth: '200px',
                   zIndex: 1001,
                   overflow: 'hidden'
-                }}>
-                  <div style={{ padding: '0.75rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.username}</div>
+                }}>                  <div style={{ padding: '0.75rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.name || user.username}</div>
                     <div style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666', marginTop: '0.25rem' }}>
                       {user.email}
                     </div>
@@ -4493,9 +4490,15 @@ function Dashboard() {
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               height: 'calc(100vh - 100px)',
               marginLeft: '-2rem'
-            }}>
-              <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>📰 Feed de Notícias</h2>
+            }}>              <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>
+                  📰 Feed de Notícias
+                  {user && (
+                    <span style={{ fontSize: '1rem', fontWeight: 400, color: darkMode ? '#ccc' : '#666', marginLeft: '1rem' }}>
+                      Bem-vindo, {user.name || user.username}!
+                    </span>
+                  )}
+                </h2>
               </div>
               <div style={{ height: 'calc(100% - 80px)', overflow: 'hidden' }}>
                 <NewsSection darkMode={darkMode} />

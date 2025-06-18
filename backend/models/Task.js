@@ -5,12 +5,12 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    maxlength: 100
+    maxlength: 200
   },
   description: {
     type: String,
     trim: true,
-    maxlength: 1000
+    maxlength: 2000
   },
   startDate: {
     type: Date
@@ -20,22 +20,27 @@ const taskSchema = new mongoose.Schema({
   },
   priority: {
     type: String,
-    enum: ['baixa', 'média', 'alta'],
+    enum: ['baixa', 'média', 'alta', 'urgente'],
     default: 'média'
   },
   status: {
     type: String,
-    enum: ['pendente', 'em_progresso', 'concluída'],
+    enum: ['pendente', 'em progresso', 'concluída'],
     default: 'pendente'
   },
-  isRecurring: {
+  category: {
+    type: String,
+    enum: ['pessoal', 'trabalho', 'estudos', 'saude', 'financas'],
+    default: 'pessoal'
+  },
+  isRecurrent: {
     type: Boolean,
     default: false
   },
   recurringType: {
     type: String,
     enum: ['diária', 'semanal', 'mensal', 'anual'],
-    required: function() { return this.isRecurring; }
+    required: function() { return this.isRecurrent; }
   },
   tags: [{
     type: String,
@@ -43,8 +48,9 @@ const taskSchema = new mongoose.Schema({
     maxlength: 50
   }],
   estimatedDuration: {
-    type: Number, // em minutos
-    min: 1
+    type: String,
+    enum: ['15min', '30min', '1h', '2h', '4h', '8h', '1d+'],
+    default: ''
   },
   // Campos de compatibilidade
   completed: {
@@ -80,6 +86,12 @@ taskSchema.pre('findOneAndUpdate', function(next) {
       update.status = 'pendente';
     }
   }
+  
+  // Converter status antigo para novo formato
+  if (update.status === 'em_progresso') {
+    update.status = 'em progresso';
+  }
+  
   next();
 });
 

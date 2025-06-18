@@ -2177,6 +2177,7 @@ function Dashboard() {
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
   const [stats, setStats] = React.useState({});
   const [darkMode, setDarkMode] = React.useState(false);
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
 
   const menuItems = [
     { id: 'news', name: 'Notícias', icon: '📰' },
@@ -2239,6 +2240,24 @@ function Dashboard() {
     window.location.reload();
   };
 
+  const toggleProfileMenu = () => {
+    setShowProfileMenu(!showProfileMenu);
+  };
+
+  // Close profile menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showProfileMenu && !event.target.closest('.profile-menu-container')) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
+
   if (currentView === 'create') {
     return (
       <CreateTaskPage 
@@ -2283,22 +2302,170 @@ function Dashboard() {
           <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 32, height: 32 }} />
           <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.5px' }}>Dashboard Pessoal</span>
         </div>
-        
-        {/* Informações do utilizador */}
+          {/* Informações do utilizador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {user && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
-              <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
-              <span style={{ fontWeight: 500 }}>{user.username}</span>
-              {user.country && (
-                <span style={{ fontSize: '1rem' }}>
-                  {countries.find(c => c.code === user.country)?.flag}
+            <div className="profile-menu-container" style={{ position: 'relative' }}>
+              <div 
+                onClick={toggleProfileMenu}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  fontSize: '0.95rem',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  transition: 'background-color 0.2s',
+                  backgroundColor: showProfileMenu ? (darkMode ? '#333' : '#f0f0f0') : 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  if (!showProfileMenu) {
+                    e.target.style.backgroundColor = darkMode ? '#2a2a2a' : '#f8f8f8';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showProfileMenu) {
+                    e.target.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
+                <span style={{ fontWeight: 500 }}>{user.username}</span>
+                {user.country && (
+                  <span style={{ fontSize: '1rem' }}>
+                    {countries.find(c => c.code === user.country)?.flag}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666' }}>
+                  {showProfileMenu ? '▲' : '▼'}
                 </span>
+              </div>
+              
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  minWidth: '200px',
+                  zIndex: 1001,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '0.75rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.username}</div>
+                    <div style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666', marginTop: '0.25rem' }}>
+                      {user.email}
+                    </div>
+                  </div>
+                  
+                  <div style={{ padding: '0.5rem 0' }}>
+                    <button
+                      onClick={() => {
+                        setCurrentView('profile');
+                        setShowProfileMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: darkMode ? '#fff' : '#000',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '0.9rem',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = darkMode ? '#333' : '#f5f5f5';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <span>👤</span>
+                      <span>Ver Perfil</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setCurrentView('settings');
+                        setShowProfileMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: darkMode ? '#fff' : '#000',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '0.9rem',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = darkMode ? '#333' : '#f5f5f5';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <span>⚙️</span>
+                      <span>Configurações</span>
+                    </button>
+                    
+                    <div style={{ 
+                      height: '1px', 
+                      backgroundColor: darkMode ? '#333' : '#e0e0e0', 
+                      margin: '0.5rem 0' 
+                    }}></div>
+                    
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setShowProfileMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#dc3545',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        fontSize: '0.9rem',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = darkMode ? '#2a1f1f' : '#fef2f2';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <span>🚪</span>
+                      <span>Sair</span>
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}
-          
-          <button 
+            <button 
             onClick={toggleDarkMode}
             style={{ 
               width: 40, height: 40, borderRadius: '50%', border: 'none',
@@ -2312,24 +2479,6 @@ function Dashboard() {
             title={darkMode ? 'Modo claro' : 'Modo escuro'}
           >
             {darkMode ? '☀️' : '🌙'}
-          </button>
-          
-          <button 
-            onClick={handleLogout}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.5rem 1rem', 
-              backgroundColor: '#dc3545', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontWeight: 500,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            🚪 Sair
           </button>
         </div>
       </header>

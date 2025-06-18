@@ -4304,8 +4304,37 @@ function Dashboard() {
                   if (!showProfileMenu) {
                     e.target.style.backgroundColor = 'transparent';
                   }
-                }}
-              >                <span style={{ color: '#7c3aed', fontSize: '1.2rem' }}>👤</span>
+                }}              >                {user.profileImage ? (
+                  <img 
+                    src={user.profileImage} 
+                    alt="Foto de perfil"
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      objectFit: 'cover',
+                      border: `2px solid ${darkMode ? '#555' : '#ddd'}`,
+                      marginRight: '0.5rem'
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span style={{ 
+                  color: '#7c3aed', 
+                  fontSize: '1.2rem',
+                  display: user.profileImage ? 'none' : 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  backgroundColor: darkMode ? '#333' : '#f0f0f0',
+                  borderRadius: '50%',
+                  border: `2px solid ${darkMode ? '#555' : '#ddd'}`,
+                  marginRight: '0.5rem'
+                }}>👤</span>
                 <span style={{ fontWeight: 500 }}>{user.name || user.username}</span>
                 {user.country && (
                   <span style={{ fontSize: '1rem' }}>
@@ -4331,10 +4360,43 @@ function Dashboard() {
                   minWidth: '200px',
                   zIndex: 1001,
                   overflow: 'hidden'
-                }}>                  <div style={{ padding: '0.75rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.name || user.username}</div>
-                    <div style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666', marginTop: '0.25rem' }}>
-                      {user.email}
+                }}>                  <div style={{ padding: '0.75rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {user.profileImage ? (
+                      <img 
+                        src={user.profileImage} 
+                        alt="Foto de perfil"
+                        style={{ 
+                          width: '40px', 
+                          height: '40px', 
+                          borderRadius: '50%', 
+                          objectFit: 'cover',
+                          border: `2px solid ${darkMode ? '#555' : '#ddd'}`
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '50%', 
+                      backgroundColor: darkMode ? '#333' : '#f0f0f0',
+                      border: `2px solid ${darkMode ? '#555' : '#ddd'}`,
+                      display: user.profileImage ? 'none' : 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.5rem',
+                      color: '#7c3aed'
+                    }}>
+                      👤
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.name || user.username}</div>
+                      <div style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666', marginTop: '0.25rem' }}>
+                        {user.email}
+                      </div>
                     </div>
                   </div>
                   

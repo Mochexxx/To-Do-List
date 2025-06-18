@@ -4016,25 +4016,26 @@ function Dashboard() {
         maxWidth: '1400px',
         margin: '130px auto 0 auto'
       }}>        {currentView === 'news' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', height: 'calc(100vh - 90px)' }}>
-            {/* Feed de notícias - coluna principal */}
+          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1rem', height: 'calc(100vh - 90px)' }}>
+            {/* Feed de notícias - coluna esquerda (75%) */}
             <div style={{ 
               backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
               borderRadius: '12px',
               border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
               overflow: 'hidden',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              height: 'calc(100vh - 100px)'
+              height: 'calc(100vh - 100px)',
+              marginLeft: '-2rem'
             }}>
               <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
-                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>📰 Feed de Notícias</h2>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>📰 Feed de Notícias</h2>
               </div>
               <div style={{ height: 'calc(100% - 80px)', overflow: 'hidden' }}>
                 <NewsSection darkMode={darkMode} />
               </div>
             </div>
 
-            {/* Sidebar de tarefas */}
+            {/* Sidebar de tarefas - coluna direita (25%) */}
             <div style={{ 
               backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
               borderRadius: '12px',
@@ -4042,23 +4043,23 @@ function Dashboard() {
               overflow: 'hidden',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}>
-              <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>📋 Tarefas do Dia</h3>
+              <div style={{ padding: '1rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>📋 Tarefas</h3>
               </div>
-              <div style={{ height: 'calc(100% - 80px)', overflow: 'auto', padding: '1rem' }}>
+              <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '1rem' }}>
                 <TasksSidebar tasks={tasks} darkMode={darkMode} onTaskUpdated={handleTaskUpdated} />
               </div>
             </div>
           </div>
-        )}
-
-        {currentView === 'tasks' && (
+        )}{currentView === 'tasks' && (
           <div style={{ 
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
             padding: '2rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem'
           }}>
             <TasksDashboard
               tasks={tasks}
@@ -4066,15 +4067,15 @@ function Dashboard() {
               onTaskDeleted={handleTaskDeleted}
             />
           </div>
-        )}
-
-        {currentView === 'agenda' && (
+        )}        {currentView === 'agenda' && (
           <div style={{ 
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
             padding: '2rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem'
           }}>
             <AgendaView darkMode={darkMode} />
           </div>
@@ -4086,7 +4087,9 @@ function Dashboard() {
             borderRadius: '12px',
             border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
             padding: '2rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem'
           }}>
             <SettingsView darkMode={darkMode} toggleDarkMode={toggleDarkMode} user={user} />
           </div>

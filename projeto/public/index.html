@@ -1013,15 +1013,15 @@ function NewsSection({ darkMode = false }) {
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const [apiStatus, setApiStatus] = React.useState('unknown'); // 'working', 'error', 'unknown'
-  const [userCategoryPreferences, setUserCategoryPreferences] = React.useState(['technology', 'business']);
+  const [userCategoryPreferences, setUserCategoryPreferences] = React.useState(['technology', 'business', 'science']);
   const newsContainerRef = React.useRef(null);
-
   const categories = [
-    { id: 'general', name: 'Geral', icon: '📰' },
+    { id: 'general', name: 'Geral', icon: '🌍' },
+    { id: 'technology', name: 'Tecnologia', icon: '�' },
     { id: 'business', name: 'Negócios', icon: '💼' },
-    { id: 'technology', name: 'Tecnologia', icon: '💻' },
-    { id: 'sports', name: 'Esportes', icon: '⚽' },
     { id: 'health', name: 'Saúde', icon: '🏥' },
+    { id: 'science', name: 'Ciência', icon: '🔬' },
+    { id: 'sports', name: 'Desportos', icon: '⚽' },
     { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
   ];
 
@@ -1032,7 +1032,7 @@ function NewsSection({ darkMode = false }) {
       if (savedSettings) {
         try {
           const settings = JSON.parse(savedSettings);
-          setUserCategoryPreferences(settings.newsCategories || ['technology', 'business']);
+          setUserCategoryPreferences(settings.newsCategories || ['technology', 'business', 'science']);
         } catch (error) {
           console.error('Erro ao carregar preferências de categorias:', error);
         }
@@ -1043,7 +1043,7 @@ function NewsSection({ darkMode = false }) {
 
     // Escutar mudanças nas configurações
     const handleSettingsChange = (event) => {
-      setUserCategoryPreferences(event.detail.newsCategories || ['technology', 'business']);
+      setUserCategoryPreferences(event.detail.newsCategories || ['technology', 'business', 'science']);
     };
 
     window.addEventListener('newsSettingsChanged', handleSettingsChange);
@@ -3739,7 +3739,7 @@ function AgendaView({ darkMode }) {
 function SettingsView({ darkMode, toggleDarkMode, user }) {
   const [notifications, setNotifications] = React.useState(true);
   const [emailUpdates, setEmailUpdates] = React.useState(false);
-  const [newsCategories, setNewsCategories] = React.useState(['technology', 'business']);
+  const [newsCategories, setNewsCategories] = React.useState(['technology', 'business', 'science']);
   const [message, setMessage] = React.useState('');
 
   const categories = [
@@ -3760,7 +3760,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
         const settings = JSON.parse(savedSettings);
         setNotifications(settings.notifications ?? true);
         setEmailUpdates(settings.emailUpdates ?? false);
-        setNewsCategories(settings.newsCategories ?? ['technology', 'business']);
+        setNewsCategories(settings.newsCategories ?? ['technology', 'business', 'science']);
       } catch (error) {
         console.error('Erro ao carregar configurações de notícias:', error);
       }
@@ -3941,7 +3941,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
             
             <button
               onClick={() => {
-                const defaultCategories = ['technology', 'business'];
+                const defaultCategories = ['technology', 'business', 'science'];
                 setNewsCategories(defaultCategories);
                 saveSettings(notifications, emailUpdates, defaultCategories);
               }}

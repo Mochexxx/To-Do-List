@@ -1286,73 +1286,8 @@ function NewsSection({ darkMode = false }) {
     
     console.log('📰 Retornando todos os artigos (categoria geral):', mockArticles.length);
     return mockArticles;
-  };
-  return (
+  };  return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3 style={{ margin: 0, marginRight: '1rem' }}>📰 Notícias</h3>
-        
-        {/* Indicador de status da API */}
-        <div style={{ 
-          fontSize: '0.7rem', 
-          padding: '0.2rem 0.5rem', 
-          borderRadius: '10px',
-          backgroundColor: 
-            apiStatus === 'working' ? '#d4edda' : 
-            apiStatus === 'error' ? '#f8d7da' : 
-            apiStatus === 'mock' ? '#fff3cd' : '#e2e3e5',
-          color: 
-            apiStatus === 'working' ? '#155724' : 
-            apiStatus === 'error' ? '#721c24' : 
-            apiStatus === 'mock' ? '#856404' : '#6c757d',
-          marginRight: '1rem'
-        }}>
-          {apiStatus === 'working' && '🟢 API Ativa'}
-          {apiStatus === 'error' && '🔴 API Offline'}
-          {apiStatus === 'mock' && '🟡 Dados Demo'}
-          {apiStatus === 'checking' && '🔄 Verificando...'}
-          {apiStatus === 'unknown' && '⚪ Carregando...'}
-        </div>
-          <button 
-          onClick={() => loadNews(1, true)}
-          disabled={loading}
-          style={{ 
-            marginLeft: 'auto',
-            padding: '0.25rem 0.5rem', 
-            backgroundColor: loading ? '#6c757d' : '#007bff', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '0.8rem',
-            marginRight: '0.5rem'
-          }}
-        >
-          {loading ? '🔄 Carregando...' : '🔄 Recarregar'}
-        </button>
-        
-        <button 
-          onClick={() => {
-            if (window.newsService && window.newsService.clearCache) {
-              window.newsService.clearCache();
-              loadNews(1, true);
-            }
-          }}
-          disabled={loading}
-          style={{ 
-            padding: '0.25rem 0.5rem', 
-            backgroundColor: loading ? '#6c757d' : '#6c757d', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '0.8rem'
-          }}
-        >
-          🗑️ Limpar Cache
-        </button>
-      </div>
-      
       <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {categories.map(category => (
           <button

@@ -119,3 +119,107 @@
 | DELETE   | ✅      | ✅       | ✅        | ✅     |
 
 **Todas as operações CRUD estão completamente implementadas e funcionais!**
+
+## 🧪 Guia de Testes
+
+### Como Verificar se as Alterações Funcionam
+
+#### 1. **Teste Manual da Interface**
+1. Abra o projeto no navegador
+2. Faça login ou crie uma conta
+3. Acesse **Dashboard** → **Perfil** (👤)
+4. Na seção **"👤 Informações"**:
+   - Altere o nome do usuário
+   - Clique em **"💾 Guardar alterações"**
+   - Verifique se o nome muda no cabeçalho do dashboard
+   - Recarregue a página e confirme que a alteração persistiu
+
+#### 2. **Teste via Console do Navegador**
+```javascript
+// Abrir DevTools (F12) e executar:
+
+// 1. Verificar conectividade
+testBackendConnectivity();
+
+// 2. Verificar dados salvos
+verifyDataPersistence();
+
+// 3. Testar atualização automatizada
+testProfileUpdate();
+```
+
+#### 3. **Verificação de Persistência**
+
+**Modo Offline (localStorage):**
+- Alterações salvas em `localStorage`
+- Dados persistem após recarregar página
+- Funciona sem servidor backend
+
+**Modo Online (Backend + MongoDB):**
+- Alterações enviadas para `/api/auth/profile`
+- Dados salvos na base de dados MongoDB
+- Sincronização automática entre frontend e backend
+
+#### 4. **Indicadores Visuais**
+
+- **Status de Conectividade**: Canto superior direito do perfil
+  - 🌐 Online: Backend conectado
+  - 💻 Offline: Usando localStorage
+
+- **Validação em Tempo Real**: Campos ficam vermelhos se inválidos
+- **Estados de Carregamento**: Botões mostram "⏳ Guardando..."
+- **Mensagens de Feedback**: Sucesso (verde) ou erro (vermelho)
+
+### Cenários de Teste Importantes
+
+#### ✅ CREATE (Criação)
+- Registrar novo usuário com dados completos
+- Verificar se preferências são criadas automaticamente
+
+#### ✅ READ (Leitura)
+- Visualizar todas as informações do perfil
+- Verificar estatísticas na aba correspondente
+
+#### ✅ UPDATE (Atualização)
+1. **Nome de usuário**:
+   - Alterar e verificar atualização imediata no header
+   - Confirmar validação (mínimo 3 caracteres)
+
+2. **Email**:
+   - Alterar e verificar validação de formato
+   - Confirmar que não aceita emails inválidos
+
+3. **Foto de perfil**:
+   - Upload de imagem (máx 5MB)
+   - Remoção de foto existente
+
+4. **Preferências**:
+   - Idioma, fuso horário, notificações
+   - Prioridade padrão
+
+5. **Senha**:
+   - Alterar com validação de senha atual
+   - Confirmar nova senha
+
+#### ✅ DELETE (Eliminação)
+- Eliminar conta com confirmação "ELIMINAR"
+- Verificar remoção completa dos dados
+
+### Troubleshooting
+
+**Se as alterações não aparecem:**
+1. Verificar console para erros
+2. Confirmar se `updateUserData()` foi chamada
+3. Recarregar página para forçar atualização
+
+**Se modo online não funciona:**
+1. Verificar se backend está rodando: `npm start` na pasta backend
+2. Confirmar MongoDB está ativo
+3. Verificar URL da API: `http://localhost:5000`
+
+**Para resetar dados de teste:**
+```javascript
+// No console do navegador:
+localStorage.clear();
+location.reload();
+```

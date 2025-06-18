@@ -1,5 +1,49 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
+// Função para verificar se o backend está disponível
+const checkBackendConnectivity = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/', { 
+      method: 'GET',
+      timeout: 3000 
+    });
+    return response.ok;
+  } catch (error) {
+    console.log('Backend não disponível, usando modo offline');
+    return false;
+  }
+};
+
+// Helper function para fazer requisições HTTP
+const makeRequest = async (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  };
+
+  const finalOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers
+    }
+  };
+
+  const response = await fetch(url, finalOptions);
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Erro na requisição');
+  }
+  
+  return response.json();
+};
+
 // Storage Service for local data persistence
 const storageService = {
   getTasks() {
@@ -82,38 +126,66 @@ const storageService = {
 
 // Auth Service
 const authService = {
+  isOnlineMode: false,
+
+  async initialize() {
+    this.isOnlineMode = await checkBackendConnectivity();
+    console.log(`Modo ${this.isOnlineMode ? 'online' : 'offline'} ativado`);
+  },
+
   async register(userData) {
     try {
-      // Create comprehensive user object with all registration data
-      const user = {
-        id: Date.now().toString(),
-        username: userData.username,
-        email: userData.email,
-        country: userData.country,
-        countryName: userData.countryName,
-        newsCountryCode: userData.newsCountryCode,
-        registeredAt: userData.registeredAt,
-        createdAt: new Date().toISOString()
-      };
-      
-      const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
-      
-      // Save user data and token
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      // Save user preferences with country-based defaults
-      const userPreferences = {
-        newsCountry: userData.newsCountryCode,
-        language: userData.country === 'br' ? 'pt-BR' : userData.country === 'pt' ? 'pt-PT' : 'en',
-        timezone: this.getTimezoneByCountry(userData.country),
-        notifications: true,
-        defaultPriority: 'média',
-        darkMode: false
-      };
-      localStorage.setItem('userPreferences', JSON.stringify(userPreferences));
-      
-      return { token, user, message: 'Registro realizado com sucesso!' };
+      if (this.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/auth/register`, {
+          method: 'POST',
+          body: JSON.stringify({
+            username: userData.username,
+            email: userData.email,
+            password: userData.password,
+            country: userData.country,
+            countryName: userData.countryName,
+            newsCountryCode: userData.newsCountryCode
+          })
+        });
+
+        // Salvar token e dados do usuário
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        return response;
+      } else {
+        // Modo offline - usar localStorage
+        const user = {
+          id: Date.now().toString(),
+          username: userData.username,
+          email: userData.email,
+          country: userData.country,
+          countryName: userData.countryName,
+          newsCountryCode: userData.newsCountryCode,
+          registeredAt: userData.registeredAt,
+          createdAt: new Date().toISOString()
+        };
+        
+        const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
+        
+        // Save user data and token
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Save user preferences with country-based defaults
+        const userPreferences = {
+          newsCountry: userData.newsCountryCode,
+          language: userData.country === 'br' ? 'pt-BR' : userData.country === 'pt' ? 'pt-PT' : 'en',
+          timezone: this.getTimezoneByCountry(userData.country),
+          notifications: true,
+          defaultPriority: 'média',
+          darkMode: false
+        };
+        localStorage.setItem('userPreferences', JSON.stringify(userPreferences));
+        
+        return { token, user, message: 'Registro realizado com sucesso!' };
+      }
     } catch (error) {
       throw error;
     }
@@ -139,21 +211,37 @@ const authService = {
     };
     return timezones[countryCode] || 'UTC';
   },
-
   async login(credentials) {
     try {
-      // For offline mode, simulate login validation
-      const savedUser = localStorage.getItem('user');
-      if (!savedUser) {
-        throw new Error('Nenhum usuário registrado. Crie uma conta primeiro.');
+      if (this.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password
+          })
+        });
+
+        // Salvar token e dados do usuário
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        return response;
+      } else {
+        // Modo offline - usar localStorage
+        const savedUser = localStorage.getItem('user');
+        if (!savedUser) {
+          throw new Error('Nenhum usuário registrado. Crie uma conta primeiro.');
+        }
+        
+        const user = JSON.parse(savedUser);
+        const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
+        
+        localStorage.setItem('token', token);
+        
+        return { token, user, message: 'Login realizado com sucesso (modo offline)' };
       }
-      
-      const user = JSON.parse(savedUser);
-      const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
-      
-      localStorage.setItem('token', token);
-      
-      return { token, user, message: 'Login realizado com sucesso (modo offline)' };
     } catch (error) {
       throw error;
     }
@@ -205,63 +293,92 @@ const authService = {
       throw error;
     }
   },
-
   async updateUserInfo(userData) {
     try {
-      // Validar dados básicos
-      if (userData.username && userData.username.length < 3) {
-        throw new Error('Nome de usuário deve ter pelo menos 3 caracteres');
+      if (this.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/auth/profile`, {
+          method: 'PUT',
+          body: JSON.stringify(userData)
+        });
+
+        // Atualizar dados locais com a resposta do servidor
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        // Atualizar preferências se fornecidas
+        if (userData.language || userData.timezone || userData.notifications !== undefined || 
+            userData.defaultPriority || userData.darkMode !== undefined) {
+          const currentPrefs = localStorage.getItem('userPreferences');
+          const preferences = currentPrefs ? JSON.parse(currentPrefs) : {};
+          
+          const updatedPreferences = {
+            ...preferences,
+            language: userData.language || preferences.language,
+            timezone: userData.timezone || preferences.timezone,
+            notifications: userData.notifications !== undefined ? userData.notifications : preferences.notifications,
+            defaultPriority: userData.defaultPriority || preferences.defaultPriority,
+            darkMode: userData.darkMode !== undefined ? userData.darkMode : preferences.darkMode
+          };
+          
+          localStorage.setItem('userPreferences', JSON.stringify(updatedPreferences));
+        }
+
+        return response;
+      } else {
+        // Modo offline - validar dados básicos
+        if (userData.username && userData.username.length < 3) {
+          throw new Error('Nome de usuário deve ter pelo menos 3 caracteres');
+        }
+        
+        if (userData.email && !/^\S+@\S+\.\S+$/.test(userData.email)) {
+          throw new Error('Email inválido');
+        }
+
+        // Obter usuário atual
+        const currentUser = this.getUser();
+        if (!currentUser) {
+          throw new Error('Usuário não encontrado');
+        }
+
+        // Atualizar dados do usuário
+        const updatedUser = {
+          ...currentUser,
+          username: userData.username || currentUser.username,
+          email: userData.email || currentUser.email,
+          profileImage: userData.profileImage !== undefined ? userData.profileImage : currentUser.profileImage,
+          country: userData.country || currentUser.country,
+          countryName: userData.countryName || currentUser.countryName,
+          newsCountryCode: userData.newsCountryCode || currentUser.newsCountryCode,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Atualizar preferências
+        const currentPrefs = localStorage.getItem('userPreferences');
+        const preferences = currentPrefs ? JSON.parse(currentPrefs) : {};
+        
+        const updatedPreferences = {
+          ...preferences,
+          language: userData.language || preferences.language,
+          timezone: userData.timezone || preferences.timezone,
+          notifications: userData.notifications !== undefined ? userData.notifications : preferences.notifications,
+          defaultPriority: userData.defaultPriority || preferences.defaultPriority,
+          darkMode: userData.darkMode !== undefined ? userData.darkMode : preferences.darkMode
+        };
+
+        // Salvar no localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('userPreferences', JSON.stringify(updatedPreferences));
+
+        return {
+          message: 'Perfil atualizado com sucesso',
+          user: { ...updatedUser, ...updatedPreferences }
+        };
       }
-      
-      if (userData.email && !/^\S+@\S+\.\S+$/.test(userData.email)) {
-        throw new Error('Email inválido');
-      }
-
-      // Obter usuário atual
-      const currentUser = this.getUser();
-      if (!currentUser) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      // Atualizar dados do usuário
-      const updatedUser = {
-        ...currentUser,
-        username: userData.username || currentUser.username,
-        email: userData.email || currentUser.email,
-        profileImage: userData.profileImage !== undefined ? userData.profileImage : currentUser.profileImage,
-        country: userData.country || currentUser.country,
-        countryName: userData.countryName || currentUser.countryName,
-        newsCountryCode: userData.newsCountryCode || currentUser.newsCountryCode,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Atualizar preferências
-      const currentPrefs = localStorage.getItem('userPreferences');
-      const preferences = currentPrefs ? JSON.parse(currentPrefs) : {};
-      
-      const updatedPreferences = {
-        ...preferences,
-        language: userData.language || preferences.language,
-        timezone: userData.timezone || preferences.timezone,
-        notifications: userData.notifications !== undefined ? userData.notifications : preferences.notifications,
-        defaultPriority: userData.defaultPriority || preferences.defaultPriority,
-        darkMode: userData.darkMode !== undefined ? userData.darkMode : preferences.darkMode
-      };
-
-      // Salvar no localStorage
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      localStorage.setItem('userPreferences', JSON.stringify(updatedPreferences));
-
-      return {
-        message: 'Perfil atualizado com sucesso',
-        user: { ...updatedUser, ...updatedPreferences }
-      };
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       throw error;
     }
   },
-
   async changePassword(currentPassword, newPassword) {
     try {
       // Validações básicas
@@ -273,19 +390,29 @@ const authService = {
         throw new Error('A nova senha deve ter pelo menos 6 caracteres');
       }
 
-      // Em modo offline, simulamos a verificação da senha atual
-      // Em um ambiente real, esta verificação seria feita no servidor
-      console.log('Validando alteração de senha...');
-      
-      // Simular delay de processamento
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (this.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/auth/change-password`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            currentPassword,
+            newPassword
+          })
+        });
 
-      // Para demonstração, consideramos que a senha atual está correta
-      // Em produção, isso seria validado no backend
-      
-      return {
-        message: 'Senha alterada com sucesso'
-      };
+        return response;
+      } else {
+        // Modo offline - simular verificação da senha atual
+        console.log('Validando alteração de senha...');
+        
+        // Simular delay de processamento
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Para demonstração, consideramos que a senha atual está correta
+        return {
+          message: 'Senha alterada com sucesso'
+        };
+      }
     } catch (error) {
       console.error('Erro ao alterar senha:', error);
       throw error;
@@ -693,4 +820,18 @@ window.authService = authService;
 window.tasksService = tasksService;
 window.storageService = storageService;
 window.taskValidationService = taskValidationService;
+
+// Inicializar o serviço de autenticação quando a página carrega
+document.addEventListener('DOMContentLoaded', async () => {
+  await authService.initialize();
+});
+
+// Para caso o script seja carregado após o DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', async () => {
+    await authService.initialize();
+  });
+} else {
+  authService.initialize();
+}
 window.taskValidationService = taskValidationService;

@@ -21,9 +21,11 @@
             }
         </style>
     </head>
-    <body>
-        <div id="root"></div>        <script src="../src/services/api.js"></script>
+    <body>        <div id="root"></div>
+        
+        <script src="../src/services/api.js"></script>
         <script src="../src/services/news.js"></script>
+        <script src="../test-profile-crud.js"></script>
         <script type="text/babel">
 // Countries data with flags and news codes
 const countries = [
@@ -1690,6 +1692,19 @@ function ProfilePage({ onBack, user, stats }) {
       setLoading(true);
       setMessage('');
       const result = await authService.updateUserInfo(userInfo);
+      
+      // Atualizar estado local com dados atualizados
+      const updatedUser = result.user || userInfo;
+      setUserInfo(prev => ({
+        ...prev,
+        ...updatedUser
+      }));
+      
+      // Atualizar dados globais se a função estiver disponível
+      if (window.updateUserData) {
+        window.updateUserData(updatedUser);
+      }
+      
       setMessage('Informações atualizadas com sucesso!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
@@ -1795,8 +1810,7 @@ function ProfilePage({ onBack, user, stats }) {
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>      <div style={{ marginBottom: '2rem' }}>
         <button 
           onClick={onBack}
           style={{ 
@@ -1811,7 +1825,23 @@ function ProfilePage({ onBack, user, stats }) {
         >
           ← Voltar
         </button>
-        <h2>👤 Perfil do Utilizador</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>👤 Perfil do Utilizador</h2>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            padding: '0.5rem 1rem',
+            backgroundColor: authService.isOnlineMode ? '#e8f5e8' : '#fff3cd',
+            color: authService.isOnlineMode ? '#155724' : '#856404',
+            border: `1px solid ${authService.isOnlineMode ? '#c3e6cb' : '#ffeaa7'}`,
+            borderRadius: '4px',
+            fontSize: '0.8rem'
+          }}>
+            <span>{authService.isOnlineMode ? '🌐' : '💻'}</span>
+            <span>{authService.isOnlineMode ? 'Online' : 'Offline'}</span>
+          </div>
+        </div>
       </div>
 
       {message && (
@@ -2700,18 +2730,31 @@ function Dashboard() {
     { id: 'news', name: 'Notícias', icon: '📰' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
     { id: 'agenda', name: 'Agenda', icon: '📅' }
-  ];
-  React.useEffect(() => {
+  ];  React.useEffect(() => {
     loadTasks();
-    const userData = authService.getUser();
-    setUser(userData);
+    loadUserData();
     
     // Load dark mode preference
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
     document.body.style.backgroundColor = savedDarkMode ? '#121212' : '#ffffff';
     document.body.style.color = savedDarkMode ? '#ffffff' : '#000000';
+    
+    // Definir função global para atualizar dados do usuário
+    window.updateUserData = (updatedUser) => {
+      setUser(updatedUser);
+    };
+    
+    // Cleanup
+    return () => {
+      delete window.updateUserData;
+    };
   }, []);
+
+  const loadUserData = () => {
+    const userData = authService.getUser();
+    setUser(userData);
+  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;

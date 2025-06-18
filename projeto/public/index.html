@@ -1013,6 +1013,7 @@ function NewsSection({ darkMode = false }) {
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const [apiStatus, setApiStatus] = React.useState('unknown'); // 'working', 'error', 'unknown'
+  const [userCategoryPreferences, setUserCategoryPreferences] = React.useState(['technology', 'business']);
   const newsContainerRef = React.useRef(null);
 
   const categories = [
@@ -1023,6 +1024,32 @@ function NewsSection({ darkMode = false }) {
     { id: 'health', name: 'Saúde', icon: '🏥' },
     { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
   ];
+
+  // Carregar preferências de categorias do usuário
+  React.useEffect(() => {
+    const loadUserPreferences = () => {
+      const savedSettings = localStorage.getItem('newsSettings');
+      if (savedSettings) {
+        try {
+          const settings = JSON.parse(savedSettings);
+          setUserCategoryPreferences(settings.newsCategories || ['technology', 'business']);
+        } catch (error) {
+          console.error('Erro ao carregar preferências de categorias:', error);
+        }
+      }
+    };
+
+    loadUserPreferences();
+
+    // Escutar mudanças nas configurações
+    const handleSettingsChange = (event) => {
+      setUserCategoryPreferences(event.detail.newsCategories || ['technology', 'business']);
+    };
+
+    window.addEventListener('newsSettingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('newsSettingsChanged', handleSettingsChange);
+  }, []);
+
   React.useEffect(() => {
     setNews([]);
     setPage(1);
@@ -1269,44 +1296,106 @@ function NewsSection({ darkMode = false }) {
           mockArticles.push(article);
         });
       }
-    });
-
-    // Misturar os artigos para variedade
+    });    // Misturar os artigos para variedade
     mockArticles.sort(() => Math.random() - 0.5);
     
     console.log('📊 getMockNews - Categoria selecionada:', selectedCategory);
     console.log('📈 Total de artigos gerados:', mockArticles.length);
+    console.log('👤 Preferências do usuário:', userCategoryPreferences);
 
     // Filtrar por categoria se não for 'general'
     if (selectedCategory !== 'general') {
       const filtered = mockArticles.filter(article => article.category === selectedCategory);
       console.log('🏷️ Artigos filtrados para categoria', selectedCategory, ':', filtered.length);
       return filtered;
+    }    // Para categoria 'general', usar apenas as categorias preferidas pelo usuário
+    if (userCategoryPreferences && userCategoryPreferences.length > 0) {
+      const filteredByPreferences = mockArticles.filter(article => 
+        userCategoryPreferences.includes(article.category)
+      );
+      console.log('⭐ Artigos filtrados por preferências do usuário:', filteredByPreferences.length);
+      console.log('📋 Categorias incluídas:', userCategoryPreferences);
+      return filteredByPreferences;
     }
-    
-    console.log('📰 Retornando todos os artigos (categoria geral):', mockArticles.length);
+
+    // Se nenhuma categoria estiver selecionada, mostrar todas as notícias
+    console.log('📰 Nenhuma preferência definida, retornando todos os artigos:', mockArticles.length);
     return mockArticles;
   };  return (
     <div>
       <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {categories.map(category => (
-          <button
-            key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            style={{
-              padding: '0.4rem 0.8rem',
-              border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
-              borderRadius: '15px',
-              backgroundColor: selectedCategory === category.id ? '#007bff' : (darkMode ? '#3a3a3a' : 'white'),
-              color: selectedCategory === category.id ? 'white' : (darkMode ? '#fff' : '#333'),
-              cursor: 'pointer',
-              fontSize: '0.8rem'
-            }}
-          >
-            {category.icon} {category.name}
-          </button>
-        ))}
+        {categories.map(category => {
+          const isPreferred = userCategoryPreferences.includes(category.id);
+          const isSelected = selectedCategory === category.id;
+          return (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              style={{
+                padding: '0.4rem 0.8rem',
+                border: `2px solid ${isSelected ? '#007bff' : (isPreferred ? '#28a745' : (darkMode ? '#555' : '#ddd'))}`,
+                borderRadius: '15px',
+                backgroundColor: isSelected ? '#007bff' : (darkMode ? '#3a3a3a' : 'white'),
+                color: isSelected ? 'white' : (darkMode ? '#fff' : '#333'),
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                position: 'relative',
+                opacity: (category.id === 'general' || isPreferred) ? 1 : 0.6
+              }}
+              title={isPreferred ? `${category.name} - Nas suas preferências` : category.name}
+            >
+              {category.icon} {category.name}
+              {isPreferred && category.id !== 'general' && (
+                <span style={{ 
+                  marginLeft: '0.3rem', 
+                  fontSize: '0.7rem',
+                  color: isSelected ? 'white' : '#28a745'
+                }}>
+                  ⭐
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
+        {/* Informação sobre filtros ativos */}
+      {selectedCategory === 'general' && userCategoryPreferences.length > 0 && (
+        <div style={{ 
+          marginBottom: '1rem',
+          padding: '0.75rem',
+          backgroundColor: darkMode ? '#2a4d3a' : '#d4edda',
+          border: `1px solid ${darkMode ? '#4ade80' : '#c3e6cb'}`,
+          borderRadius: '6px',
+          fontSize: '0.85rem',
+          color: darkMode ? '#86efac' : '#155724'
+        }}>
+          <strong>📋 Filtro ativo:</strong> Mostrando apenas notícias das categorias que seleccionou nas configurações: {' '}
+          {userCategoryPreferences.map(catId => {
+            const cat = categories.find(c => c.id === catId);
+            return cat ? `${cat.icon} ${cat.name}` : catId;
+          }).join(', ')}
+          {'. '}
+          <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+            Vá às ⚙️ Configurações para alterar as suas preferências.
+          </span>
+        </div>
+      )}
+
+      {/* Aviso quando nenhuma categoria está selecionada */}
+      {selectedCategory === 'general' && userCategoryPreferences.length === 0 && (
+        <div style={{ 
+          marginBottom: '1rem',
+          padding: '0.75rem',
+          backgroundColor: darkMode ? '#4d3a2a' : '#fff3cd',
+          border: `1px solid ${darkMode ? '#d97706' : '#ffeaa7'}`,
+          borderRadius: '6px',
+          fontSize: '0.85rem',
+          color: darkMode ? '#fbbf24' : '#856404'
+        }}>
+          <strong>⚠️ Aviso:</strong> Nenhuma categoria de notícias foi selecionada nas configurações. 
+          Vá às ⚙️ Configurações para escolher as categorias que lhe interessam e personalizar o seu feed de notícias.
+        </div>
+      )}
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -3651,6 +3740,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
   const [notifications, setNotifications] = React.useState(true);
   const [emailUpdates, setEmailUpdates] = React.useState(false);
   const [newsCategories, setNewsCategories] = React.useState(['technology', 'business']);
+  const [message, setMessage] = React.useState('');
 
   const categories = [
     { id: 'general', name: 'Geral', icon: '🌍' },
@@ -3662,16 +3752,77 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
     { id: 'entertainment', name: 'Entretenimento', icon: '🎬' }
   ];
 
+  // Carregar configurações salvas quando o componente inicializa
+  React.useEffect(() => {
+    const savedSettings = localStorage.getItem('newsSettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setNotifications(settings.notifications ?? true);
+        setEmailUpdates(settings.emailUpdates ?? false);
+        setNewsCategories(settings.newsCategories ?? ['technology', 'business']);
+      } catch (error) {
+        console.error('Erro ao carregar configurações de notícias:', error);
+      }
+    }
+  }, []);
+
   const toggleCategory = (categoryId) => {
-    setNewsCategories(prev => 
-      prev.includes(categoryId) 
+    setNewsCategories(prev => {
+      const newCategories = prev.includes(categoryId) 
         ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
+        : [...prev, categoryId];
+      
+      // Salvar configurações atualizadas
+      saveSettings(notifications, emailUpdates, newCategories);
+      
+      return newCategories;
+    });
   };
-  return (
+
+  const saveSettings = (notif, email, categories) => {
+    const settings = {
+      notifications: notif,
+      emailUpdates: email,
+      newsCategories: categories,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem('newsSettings', JSON.stringify(settings));
+    
+    // Disparar evento para atualizar outras partes da aplicação
+    window.dispatchEvent(new CustomEvent('newsSettingsChanged', { detail: settings }));
+    
+    // Mostrar mensagem de confirmação
+    setMessage('⚙️ Configurações atualizadas com sucesso!');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleNotificationChange = (value) => {
+    setNotifications(value);
+    saveSettings(value, emailUpdates, newsCategories);
+  };
+
+  const handleEmailUpdatesChange = (value) => {
+    setEmailUpdates(value);
+    saveSettings(notifications, value, newsCategories);
+  };  return (
     <div style={{ padding: '1rem', maxWidth: '600px' }}>
       <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>⚙️ Configurações</h3>
+      
+      {/* Mensagem de feedback */}
+      {message && (
+        <div style={{ 
+          marginBottom: '1rem',
+          padding: '0.75rem',
+          backgroundColor: darkMode ? '#2a4d3a' : '#d4edda',
+          border: `1px solid ${darkMode ? '#4ade80' : '#c3e6cb'}`,
+          borderRadius: '6px',
+          fontSize: '0.9rem',
+          color: darkMode ? '#86efac' : '#155724'
+        }}>
+          {message}
+        </div>
+      )}
       
       {/* Notificações */}
       <div style={{ marginBottom: '2rem' }}>
@@ -3681,12 +3832,11 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
           backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
           border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
           borderRadius: '8px'
-        }}>
-          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '0.5rem' }}>
+        }}>          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '0.5rem' }}>
             <input 
               type="checkbox" 
               checked={notifications} 
-              onChange={(e) => setNotifications(e.target.checked)}
+              onChange={(e) => handleNotificationChange(e.target.checked)}
               style={{ marginRight: '0.5rem' }}
             />
             <span style={{ color: darkMode ? '#fff' : '#333' }}>Notificações push</span>
@@ -3695,17 +3845,25 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
             <input 
               type="checkbox" 
               checked={emailUpdates} 
-              onChange={(e) => setEmailUpdates(e.target.checked)}
+              onChange={(e) => handleEmailUpdatesChange(e.target.checked)}
               style={{ marginRight: '0.5rem' }}
             />
             <span style={{ color: darkMode ? '#fff' : '#333' }}>Atualizações por email</span>
           </label>
         </div>
-      </div>
-
-      {/* Categorias de Notícias */}
+      </div>      {/* Categorias de Notícias */}
       <div style={{ marginBottom: '2rem' }}>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Categorias de Notícias Favoritas</h4>
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>
+          Categorias de Notícias Favoritas
+          <span style={{ 
+            marginLeft: '0.5rem', 
+            fontSize: '0.8rem',
+            color: darkMode ? '#999' : '#666',
+            fontWeight: 'normal'
+          }}>
+            ({newsCategories.length} selecionada{newsCategories.length !== 1 ? 's' : ''})
+          </span>
+        </h4>
         <div style={{ 
           padding: '1rem', 
           backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
@@ -3725,7 +3883,81 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
                   {category.icon} {category.name}
                 </span>
               </label>
-            ))}          </div>
+            ))}          </div>          <div style={{ 
+            marginTop: '1rem', 
+            padding: '0.75rem', 
+            backgroundColor: darkMode ? '#2a2a2a' : '#e9ecef',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            color: darkMode ? '#ccc' : '#666'
+          }}>
+            💡 <strong>Dica:</strong> As categorias selecionadas influenciarão as notícias mostradas nas páginas "Início" e "Notícias". 
+            Deixe desmarcadas as categorias que não lhe interessam para ver apenas conteúdo relevante.
+          </div>
+          
+          {/* Botões de ação */}
+          <div style={{ 
+            marginTop: '1rem', 
+            display: 'flex', 
+            gap: '0.5rem',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => {
+                const allCategories = categories.filter(c => c.id !== 'general').map(c => c.id);
+                setNewsCategories(allCategories);
+                saveSettings(notifications, emailUpdates, allCategories);
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: darkMode ? '#444' : '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              ✅ Seleccionar Todas
+            </button>
+            
+            <button
+              onClick={() => {
+                setNewsCategories([]);
+                saveSettings(notifications, emailUpdates, []);
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: darkMode ? '#444' : '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              ❌ Desmarcar Todas
+            </button>
+            
+            <button
+              onClick={() => {
+                const defaultCategories = ['technology', 'business'];
+                setNewsCategories(defaultCategories);
+                saveSettings(notifications, emailUpdates, defaultCategories);
+              }}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: darkMode ? '#0d6efd' : '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              🔄 Padrão (Tecnologia + Negócios)
+            </button>
+          </div>
         </div>
       </div>
     </div>

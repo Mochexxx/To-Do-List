@@ -1,2 +1,9 @@
-✅ dependendo da pagina onde e criada a tarefa apos criar tenho que ficar nessa pagina
+📋 Filtro ativo: Mostrando apenas notícias das categorias que seleccionou nas configurações: 💻 Tecnologia, 💼 Negócios, 📰 Geral, science, 🎬 Entretenimento, 🏥 Saúde, ⚽ Esportes. Vá às ⚙️ Configurações para alterar as suas preferências.
 
+
+Remove isto
+
+
+🔄 Padrão (Tecnologia + Negócios)
+
+na pagina das opcoes onde escolhes os filtros reitra issso e ao inves mete 1 butao verde para salvar os filtros

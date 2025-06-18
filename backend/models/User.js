@@ -20,6 +20,49 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 6
+  },
+  // Campos adicionais para perfil completo
+  profileImage: {
+    type: String,
+    default: ''
+  },
+  country: {
+    type: String,
+    default: ''
+  },
+  countryName: {
+    type: String,
+    default: ''
+  },
+  newsCountryCode: {
+    type: String,
+    default: ''
+  },
+  language: {
+    type: String,
+    default: 'pt',
+    enum: ['pt', 'en', 'es', 'fr']
+  },
+  timezone: {
+    type: String,
+    default: 'Europe/Lisbon'
+  },
+  notifications: {
+    type: Boolean,
+    default: true
+  },
+  defaultPriority: {
+    type: String,
+    default: 'média',
+    enum: ['baixa', 'média', 'alta', 'urgente']
+  },
+  darkMode: {
+    type: Boolean,
+    default: false
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
@@ -41,6 +84,13 @@ userSchema.pre('save', async function(next) {
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Method to get public user data (without password)
+userSchema.methods.toPublicJSON = function() {
+  const user = this.toObject();
+  delete user.password;
+  return user;
 };
 
 module.exports = mongoose.model('User', userSchema);

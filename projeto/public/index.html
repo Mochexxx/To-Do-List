@@ -1630,24 +1630,74 @@ function ProfilePage({ onBack, user, stats }) {
     confirmPassword: ''
   });
   const [message, setMessage] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [validationErrors, setValidationErrors] = React.useState({});
 
+  // Validação em tempo real
+  const validateField = (field, value) => {
+    const errors = { ...validationErrors };
+    
+    switch (field) {
+      case 'username':
+        if (value && value.length < 3) {
+          errors.username = 'Nome deve ter pelo menos 3 caracteres';
+        } else {
+          delete errors.username;
+        }
+        break;
+      case 'email':
+        if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+          errors.email = 'Email inválido';
+        } else {
+          delete errors.email;
+        }
+        break;
+      case 'newPassword':
+        if (value && value.length < 6) {
+          errors.newPassword = 'Senha deve ter pelo menos 6 caracteres';
+        } else {
+          delete errors.newPassword;
+        }
+        break;
+      case 'confirmPassword':
+        if (value && value !== passwordData.newPassword) {
+          errors.confirmPassword = 'Senhas não coincidem';
+        } else {
+          delete errors.confirmPassword;
+        }
+        break;
+    }
+    
+    setValidationErrors(errors);
+  };
+
+  const handleUserInfoChange = (field, value) => {
+    setUserInfo(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
+  const handlePasswordDataChange = (field, value) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
   const sections = [
     { id: 'info', name: '👤 Informações', icon: '👤' },
     { id: 'security', name: '🔐 Segurança', icon: '🔐' },
     { id: 'preferences', name: '⚙️ Preferências', icon: '⚙️' },
+    { id: 'stats', name: '📊 Estatísticas', icon: '📊' },
     { id: 'actions', name: '🗑️ Ações', icon: '🗑️' }
-  ];
-
-  const handleUserInfoUpdate = async () => {
+  ];  const handleUserInfoUpdate = async () => {
     try {
-      await authService.updateUserInfo(userInfo);
+      setLoading(true);
+      setMessage('');
+      const result = await authService.updateUserInfo(userInfo);
       setMessage('Informações atualizadas com sucesso!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       setMessage('Erro ao atualizar informações: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
-
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setMessage('As senhas não coincidem');
@@ -1658,20 +1708,22 @@ function ProfilePage({ onBack, user, stats }) {
       return;
     }
     try {
+      setLoading(true);
+      setMessage('');
       await authService.changePassword(passwordData.currentPassword, passwordData.newPassword);
       setMessage('Senha alterada com sucesso!');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       setMessage('Erro ao alterar senha: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
-
   const handleLogoutAll = async () => {
     if (confirm('Tem certeza que deseja terminar todas as sessões?')) {
       try {
-        // Simulate logout all sessions - in a real app this would call the backend
-        authService.logout();
+        await authService.logoutAllSessions();
         setMessage('Todas as sessões foram terminadas. Você será redirecionado...');
         setTimeout(() => window.location.reload(), 2000);
       } catch (error) {
@@ -1701,9 +1753,8 @@ function ProfilePage({ onBack, user, stats }) {
         const base64Image = e.target.result;
         const updatedUserInfo = { ...userInfo, profileImage: base64Image };
         setUserInfo(updatedUserInfo);
-        
-        // Save to database
-        await authService.updateUserInfo(updatedUserInfo);
+          // Save to database
+        const result = await authService.updateUserInfo(updatedUserInfo);
         setMessage('Foto de perfil atualizada com sucesso!');
         setTimeout(() => setMessage(''), 3000);
       };
@@ -1728,18 +1779,12 @@ function ProfilePage({ onBack, user, stats }) {
       setMessage('Erro ao exportar dados: ' + error.message);
     }
   };
-
   const handleDeleteAccount = async () => {
     const confirmation = prompt('Para confirmar a eliminação da conta, digite "ELIMINAR":');
     if (confirmation === 'ELIMINAR') {
       try {
-        // Delete all user data from localStorage (simulating database deletion)
+        // Delete account using the service
         await authService.deleteAccount();
-        
-        // Clear all stored data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        localStorage.removeItem('tasks');
         
         alert('Conta eliminada com sucesso!');
         window.location.reload();
@@ -1813,15 +1858,25 @@ function ProfilePage({ onBack, user, stats }) {
             <div>
               <h3>👤 Informações do Utilizador</h3>
               
-              <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
-                <div>
+              <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>                <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Nome</label>
                   <input
                     type="text"
                     value={userInfo.username}
-                    onChange={e => setUserInfo(prev => ({ ...prev, username: e.target.value }))}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                    onChange={e => handleUserInfoChange('username', e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      border: `1px solid ${validationErrors.username ? '#dc3545' : '#ddd'}`, 
+                      borderRadius: '4px',
+                      backgroundColor: validationErrors.username ? '#fff5f5' : 'white'
+                    }}
                   />
+                  {validationErrors.username && (
+                    <div style={{ color: '#dc3545', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                      {validationErrors.username}
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -1829,9 +1884,20 @@ function ProfilePage({ onBack, user, stats }) {
                   <input
                     type="email"
                     value={userInfo.email}
-                    onChange={e => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                    onChange={e => handleUserInfoChange('email', e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      border: `1px solid ${validationErrors.email ? '#dc3545' : '#ddd'}`, 
+                      borderRadius: '4px',
+                      backgroundColor: validationErrors.email ? '#fff5f5' : 'white'
+                    }}
                   />
+                  {validationErrors.email && (
+                    <div style={{ color: '#dc3545', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                      {validationErrors.email}
+                    </div>
+                  )}
                 </div>
                 
                 <div>
@@ -1886,19 +1952,20 @@ function ProfilePage({ onBack, user, stats }) {
                   />
                 </div>
               </div>
-              
-              <button 
+                <button 
                 onClick={handleUserInfoUpdate}
+                disabled={loading || Object.keys(validationErrors).some(key => ['username', 'email'].includes(key))}
                 style={{ 
                   padding: '0.75rem 1.5rem', 
-                  backgroundColor: '#28a745', 
+                  backgroundColor: loading || Object.keys(validationErrors).some(key => ['username', 'email'].includes(key)) ? '#6c757d' : '#28a745', 
                   color: 'white', 
                   border: 'none', 
                   borderRadius: '4px', 
-                  cursor: 'pointer' 
+                  cursor: loading || Object.keys(validationErrors).some(key => ['username', 'email'].includes(key)) ? 'not-allowed' : 'pointer',
+                  opacity: loading || Object.keys(validationErrors).some(key => ['username', 'email'].includes(key)) ? 0.6 : 1
                 }}
               >
-                💾 Guardar alterações
+                {loading ? '⏳ Guardando...' : '💾 Guardar alterações'}
               </button>
             </div>
           )}          {/* Segurança */}
@@ -1908,13 +1975,12 @@ function ProfilePage({ onBack, user, stats }) {
               
               <div style={{ marginBottom: '2rem' }}>
                 <h4>Alterar palavra-passe</h4>
-                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
-                  <div>
+                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>                  <div>
                     <label style={{ display: 'block', marginBottom: '0.5rem' }}>Senha atual</label>
                     <input
                       type="password"
                       value={passwordData.currentPassword}
-                      onChange={e => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      onChange={e => handlePasswordDataChange('currentPassword', e.target.value)}
                       style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
                     />
                   </div>
@@ -1923,32 +1989,55 @@ function ProfilePage({ onBack, user, stats }) {
                     <input
                       type="password"
                       value={passwordData.newPassword}
-                      onChange={e => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                      onChange={e => handlePasswordDataChange('newPassword', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: `1px solid ${validationErrors.newPassword ? '#dc3545' : '#ddd'}`, 
+                        borderRadius: '4px',
+                        backgroundColor: validationErrors.newPassword ? '#fff5f5' : 'white'
+                      }}
                     />
+                    {validationErrors.newPassword && (
+                      <div style={{ color: '#dc3545', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                        {validationErrors.newPassword}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '0.5rem' }}>Confirmar nova senha</label>
                     <input
                       type="password"
                       value={passwordData.confirmPassword}
-                      onChange={e => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+                      onChange={e => handlePasswordDataChange('confirmPassword', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.5rem', 
+                        border: `1px solid ${validationErrors.confirmPassword ? '#dc3545' : '#ddd'}`, 
+                        borderRadius: '4px',
+                        backgroundColor: validationErrors.confirmPassword ? '#fff5f5' : 'white'
+                      }}
                     />
+                    {validationErrors.confirmPassword && (
+                      <div style={{ color: '#dc3545', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                        {validationErrors.confirmPassword}
+                      </div>
+                    )}
                   </div>
-                </div>
-                <button 
+                </div>                <button 
                   onClick={handlePasswordChange}
+                  disabled={loading || Object.keys(validationErrors).some(key => ['newPassword', 'confirmPassword'].includes(key)) || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                   style={{ 
                     padding: '0.5rem 1rem', 
-                    backgroundColor: '#007bff', 
+                    backgroundColor: loading || Object.keys(validationErrors).some(key => ['newPassword', 'confirmPassword'].includes(key)) || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword ? '#6c757d' : '#007bff', 
                     color: 'white', 
                     border: 'none', 
                     borderRadius: '4px', 
-                    cursor: 'pointer' 
+                    cursor: loading || Object.keys(validationErrors).some(key => ['newPassword', 'confirmPassword'].includes(key)) || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword ? 'not-allowed' : 'pointer',
+                    opacity: loading || Object.keys(validationErrors).some(key => ['newPassword', 'confirmPassword'].includes(key)) || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword ? 0.6 : 1
                   }}
                 >
-                  🔐 Alterar senha
+                  {loading ? '⏳ Alterando...' : '🔐 Alterar senha'}
                 </button>
               </div>
               
@@ -2050,6 +2139,83 @@ function ProfilePage({ onBack, user, stats }) {
               >
                 💾 Guardar preferências
               </button>
+            </div>          )}
+
+          {/* Estatísticas */}
+          {activeSection === 'stats' && (
+            <div>
+              <h3>📊 Estatísticas de Uso</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div style={{ backgroundColor: '#e3f2fd', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1976d2' }}>{stats.total}</div>
+                  <div style={{ color: '#666' }}>Total de Tarefas</div>
+                </div>
+                
+                <div style={{ backgroundColor: '#e8f5e8', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#388e3c' }}>{stats.completed}</div>
+                  <div style={{ color: '#666' }}>Concluídas</div>
+                </div>
+                
+                <div style={{ backgroundColor: '#fff3e0', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f57c00' }}>{stats.pending}</div>
+                  <div style={{ color: '#666' }}>Pendentes</div>
+                </div>
+                
+                <div style={{ backgroundColor: '#fce4ec', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#c2185b' }}>{stats.overdue}</div>
+                  <div style={{ color: '#666' }}>Em Atraso</div>
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div>
+                  <h4>📈 Produtividade</h4>
+                  <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Taxa de conclusão:</strong> {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Média por dia:</strong> {stats.averagePerDay || 0} tarefas
+                    </div>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <strong>Sequência atual:</strong> {stats.currentStreak || 0} dias
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4>🏷️ Por Categoria</h4>
+                  <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                    {Object.entries(stats.byCategory || {}).map(([category, count]) => (
+                      <div key={category} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{ textTransform: 'capitalize' }}>{category}:</span>
+                        <strong>{count}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '2rem' }}>
+                <h4>📊 Dados da Conta</h4>
+                <div style={{ backgroundColor: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <strong>Membro desde:</strong> {new Date(user.createdAt).toLocaleDateString('pt-PT')}
+                    </div>
+                    <div>
+                      <strong>Última atualização:</strong> {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('pt-PT') : 'Nunca'}
+                    </div>
+                    <div>
+                      <strong>País:</strong> {user.countryName || 'Não definido'}
+                    </div>
+                    <div>
+                      <strong>Fuso horário:</strong> {userInfo.timezone}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

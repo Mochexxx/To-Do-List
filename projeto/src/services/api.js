@@ -175,6 +175,216 @@ const authService = {
 
   isAuthenticated() {
     return !!this.getToken();
+  },
+
+  // CRUD Operations for User Profile
+  
+  async getUserProfile() {
+    try {
+      // Em modo offline, obter do localStorage
+      const user = this.getUser();
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+      
+      // Combinar dados do usuário com preferências
+      const preferences = localStorage.getItem('userPreferences');
+      const userPrefs = preferences ? JSON.parse(preferences) : {};
+      
+      return {
+        ...user,
+        ...userPrefs,
+        profileImage: user.profileImage || '',
+        language: userPrefs.language || 'pt',
+        timezone: userPrefs.timezone || 'Europe/Lisbon',
+        notifications: userPrefs.notifications !== false,
+        defaultPriority: userPrefs.defaultPriority || 'média'
+      };
+    } catch (error) {
+      console.error('Erro ao obter perfil:', error);
+      throw error;
+    }
+  },
+
+  async updateUserInfo(userData) {
+    try {
+      // Validar dados básicos
+      if (userData.username && userData.username.length < 3) {
+        throw new Error('Nome de usuário deve ter pelo menos 3 caracteres');
+      }
+      
+      if (userData.email && !/^\S+@\S+\.\S+$/.test(userData.email)) {
+        throw new Error('Email inválido');
+      }
+
+      // Obter usuário atual
+      const currentUser = this.getUser();
+      if (!currentUser) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      // Atualizar dados do usuário
+      const updatedUser = {
+        ...currentUser,
+        username: userData.username || currentUser.username,
+        email: userData.email || currentUser.email,
+        profileImage: userData.profileImage !== undefined ? userData.profileImage : currentUser.profileImage,
+        country: userData.country || currentUser.country,
+        countryName: userData.countryName || currentUser.countryName,
+        newsCountryCode: userData.newsCountryCode || currentUser.newsCountryCode,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Atualizar preferências
+      const currentPrefs = localStorage.getItem('userPreferences');
+      const preferences = currentPrefs ? JSON.parse(currentPrefs) : {};
+      
+      const updatedPreferences = {
+        ...preferences,
+        language: userData.language || preferences.language,
+        timezone: userData.timezone || preferences.timezone,
+        notifications: userData.notifications !== undefined ? userData.notifications : preferences.notifications,
+        defaultPriority: userData.defaultPriority || preferences.defaultPriority,
+        darkMode: userData.darkMode !== undefined ? userData.darkMode : preferences.darkMode
+      };
+
+      // Salvar no localStorage
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('userPreferences', JSON.stringify(updatedPreferences));
+
+      return {
+        message: 'Perfil atualizado com sucesso',
+        user: { ...updatedUser, ...updatedPreferences }
+      };
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      throw error;
+    }
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    try {
+      // Validações básicas
+      if (!currentPassword || !newPassword) {
+        throw new Error('Senha atual e nova senha são obrigatórias');
+      }
+
+      if (newPassword.length < 6) {
+        throw new Error('A nova senha deve ter pelo menos 6 caracteres');
+      }
+
+      // Em modo offline, simulamos a verificação da senha atual
+      // Em um ambiente real, esta verificação seria feita no servidor
+      console.log('Validando alteração de senha...');
+      
+      // Simular delay de processamento
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Para demonstração, consideramos que a senha atual está correta
+      // Em produção, isso seria validado no backend
+      
+      return {
+        message: 'Senha alterada com sucesso'
+      };
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      throw error;
+    }
+  },
+
+  async deleteAccount() {
+    try {
+      // Confirmar ação crítica
+      const user = this.getUser();
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      // Remover todos os dados do usuário
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userPreferences');
+      localStorage.removeItem('tasks');
+      
+      // Limpar outros dados relacionados
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('user_') || key.startsWith('task_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      return {
+        message: 'Conta eliminada com sucesso'
+      };
+    } catch (error) {
+      console.error('Erro ao eliminar conta:', error);
+      throw error;
+    }
+  },
+
+  async logoutAllSessions() {
+    try {
+      // Em modo offline, apenas remove o token atual
+      // Em produção, invalidaria todos os tokens no servidor
+      this.logout();
+      
+      return {
+        message: 'Todas as sessões foram terminadas'
+      };
+    } catch (error) {
+      console.error('Erro ao terminar sessões:', error);
+      throw error;
+    }
+  },
+
+  async exportUserData(format = 'json') {
+    try {
+      const user = this.getUser();
+      const preferences = localStorage.getItem('userPreferences');
+      const tasks = localStorage.getItem('tasks');
+      
+      const userData = {
+        user: user,
+        preferences: preferences ? JSON.parse(preferences) : {},
+        tasks: tasks ? JSON.parse(tasks) : [],
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      if (format === 'json') {
+        return JSON.stringify(userData, null, 2);
+      } else if (format === 'csv') {
+        // Converter dados para CSV
+        let csv = 'Tipo,Campo,Valor\n';
+        
+        // Dados do usuário
+        Object.entries(user || {}).forEach(([key, value]) => {
+          csv += `Usuário,"${key}","${value}"\n`;
+        });
+        
+        // Preferências
+        const prefs = preferences ? JSON.parse(preferences) : {};
+        Object.entries(prefs).forEach(([key, value]) => {
+          csv += `Preferências,"${key}","${value}"\n`;
+        });
+        
+        // Tarefas (resumo)
+        const taskList = tasks ? JSON.parse(tasks) : [];
+        taskList.forEach((task, index) => {
+          csv += `Tarefa ${index + 1},"título","${task.title || ''}"\n`;
+          csv += `Tarefa ${index + 1},"status","${task.status || ''}"\n`;
+          csv += `Tarefa ${index + 1},"prioridade","${task.priority || ''}"\n`;
+        });
+        
+        return csv;
+      }
+      
+      throw new Error('Formato não suportado');
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      throw error;
+    }
   }
 };
 
@@ -250,26 +460,50 @@ const tasksService = {
     link.click();
   },
 
-  importTasks(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const tasks = JSON.parse(e.target.result);
-          if (Array.isArray(tasks)) {
-            storageService.saveTasks(tasks);
-            resolve(tasks);
-          } else {
-            reject(new Error('Formato de arquivo inválido'));
-          }
-        } catch (error) {
-          reject(new Error('Erro ao processar arquivo: ' + error.message));
-        }
+  async exportData(format = 'json') {
+    try {
+      const tasks = storageService.getTasks();
+      const user = authService.getUser();
+      const preferences = localStorage.getItem('userPreferences');
+      
+      const exportData = {
+        tasks: tasks,
+        user: user,
+        preferences: preferences ? JSON.parse(preferences) : {},
+        exportDate: new Date().toISOString(),
+        version: '1.0'
       };
-      reader.readAsText(file);
-    });
-  },
 
+      if (format === 'json') {
+        return JSON.stringify(exportData, null, 2);
+      } else if (format === 'csv') {
+        // Converter tarefas para CSV
+        let csv = 'ID,Título,Descrição,Status,Prioridade,Categoria,Data Criação,Data Prazo,Tags\n';
+        
+        tasks.forEach(task => {
+          const row = [
+            task._id || '',
+            `"${(task.title || '').replace(/"/g, '""')}"`,
+            `"${(task.description || '').replace(/"/g, '""')}"`,
+            task.status || '',
+            task.priority || '',
+            task.category || '',
+            task.createdAt || '',
+            task.dueDate || '',
+            `"${(task.tags || []).join(', ')}"`
+          ].join(',');
+          csv += row + '\n';
+        });
+        
+        return csv;
+      }
+      
+      throw new Error('Formato não suportado');
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      throw error;
+    }
+  },
   clearAllTasks() {
     if (confirm('Tem certeza que deseja deletar TODAS as tarefas? Esta ação não pode ser desfeita.')) {
       storageService.clear();

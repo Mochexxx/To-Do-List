@@ -3576,13 +3576,12 @@ function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
-  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
-
-  const menuItems = [
-    { id: 'news', name: 'Notícias', icon: '📰' },
+  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);  const menuItems = [
+    { id: 'news', name: 'Início', icon: '🏠' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
-    { id: 'agenda', name: 'Agenda', icon: '📅' }
-  ];  React.useEffect(() => {
+    { id: 'agenda', name: 'Agenda', icon: '📅' },
+    { id: 'noticias', name: 'Notícias', icon: '📰' }
+  ];React.useEffect(() => {
     loadTasks();
     loadUserData();
     
@@ -3704,10 +3703,33 @@ function Dashboard() {
         borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         height: '70px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png" alt="logo" style={{ width: 32, height: 32 }} />
-          <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.5px' }}>Dashboard Pessoal</span>
+      }}>        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={() => setCurrentView('news')}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: darkMode ? '#333' : '#f0f0f0',
+              color: darkMode ? '#fff' : '#333',
+              fontSize: '1.2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title="Ir para Início"
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = darkMode ? '#3a3a3a' : '#e8e8e8';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = darkMode ? '#333' : '#f0f0f0';
+            }}
+          >
+            🏠
+          </button>
         </div>
         
         {/* Botões principais centralizados */}
@@ -4009,6 +4031,28 @@ function Dashboard() {
             marginRight: '-2rem'
           }}>
             <AgendaView darkMode={darkMode} />
+          </div>        )}
+
+        {currentView === 'noticias' && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem',
+            height: 'calc(100vh - 100px)'
+          }}>
+            <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>📰 Notícias Mundiais</h2>
+              <p style={{ margin: '0.5rem 0 0 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
+                Acompanhe as últimas notícias de todo o mundo
+              </p>
+            </div>
+            <div style={{ height: 'calc(100% - 100px)', overflow: 'hidden' }}>
+              <NewsSection darkMode={darkMode} />
+            </div>
           </div>
         )}
 

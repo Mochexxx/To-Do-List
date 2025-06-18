@@ -1530,12 +1530,19 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, setCurrentView })
     applyFilters();
     setStats(tasksService.getStats());
   }, [tasks, filterStatus, filterPriority]);
-
   const applyFilters = () => {
     let filtered = tasks;
 
     if (filterStatus !== 'todas') {
-      filtered = filtered.filter(task => task.status === filterStatus);
+      if (filterStatus === 'atrasada') {
+        // Filtro especial para tarefas atrasadas
+        const today = new Date().toISOString().split('T')[0];
+        filtered = filtered.filter(task => 
+          task.dueDate && task.dueDate < today && task.status !== 'concluída'
+        );
+      } else {
+        filtered = filtered.filter(task => task.status === filterStatus);
+      }
     }
 
     if (filterPriority !== 'todas') {

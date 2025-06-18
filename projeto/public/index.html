@@ -1520,7 +1520,7 @@ function NewsSection({ darkMode = false }) {
   );
 }
 
-function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, setCurrentView }) {
+function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, navigateToView }) {
   const [filteredTasks, setFilteredTasks] = React.useState([]);
   const [filterStatus, setFilterStatus] = React.useState('todas');
   const [filterPriority, setFilterPriority] = React.useState('todas');
@@ -1598,9 +1598,8 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, setCurrentView })
             title="Ver Tarefas Completas"
           >
             ✅ Completas ({stats.completed || 0})
-          </button>
-          <button 
-            onClick={() => setCurrentView('create')}
+          </button>          <button 
+            onClick={() => navigateToView('create')}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '0.3rem',
               padding: '0.5rem 1rem', 
@@ -3737,7 +3736,8 @@ function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
-  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);  const menuItems = [
+  const [previousView, setPreviousView] = React.useState('news'); // Guardar página anterior
+  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);const menuItems = [
     { id: 'news', name: 'Início', icon: '🏠' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
     { id: 'agenda', name: 'Agenda', icon: '📅' },
@@ -3775,7 +3775,14 @@ function Dashboard() {
     
     // Apply dark mode styles to body
     document.body.style.backgroundColor = newDarkMode ? '#121212' : '#ffffff';
-    document.body.style.color = newDarkMode ? '#ffffff' : '#000000';
+    document.body.style.color = newDarkMode ? '#ffffff' : '#000000';  };
+
+  // Função personalizada para navegação que guarda a página anterior
+  const navigateToView = (newView) => {
+    if (newView === 'create') {
+      setPreviousView(currentView); // Guardar página atual antes de ir para create
+    }
+    setCurrentView(newView);
   };
 
   const loadTasks = async () => {
@@ -3787,11 +3794,10 @@ function Dashboard() {
       console.error('Erro ao carregar tarefas:', error);
     }
   };
-
   const handleTaskCreated = (newTask) => {
     setTasks(prev => [newTask, ...prev]);
     setStats(tasksService.getStats());
-    setCurrentView('dashboard'); // Volta para o dashboard após criar
+    setCurrentView(previousView); // Volta para a página anterior
   };
 
   const handleTaskUpdated = (updatedTask) => {
@@ -3825,12 +3831,11 @@ function Dashboard() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showProfileMenu]);
-
   if (currentView === 'create') {
     return (
       <CreateTaskPage 
         onTaskCreated={handleTaskCreated}
-        onBack={() => setCurrentView('dashboard')}
+        onBack={() => setCurrentView('news')}
       />
     );
   }
@@ -3838,7 +3843,7 @@ function Dashboard() {
   if (currentView === 'profile') {
     return (
       <ProfilePage 
-        onBack={() => setCurrentView('dashboard')}
+        onBack={() => setCurrentView('news')}
         user={user}
         stats={stats}
       />
@@ -4138,9 +4143,8 @@ function Dashboard() {
               overflow: 'hidden',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}>              <div style={{ padding: '1rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>📋 Tarefas</h3>
-                <button 
-                  onClick={() => setCurrentView('create')}
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>📋 Tarefas</h3>                <button 
+                  onClick={() => navigateToView('create')}
                   style={{ 
                     display: 'flex', alignItems: 'center', gap: '0.3rem',
                     padding: '0.4rem 0.8rem', 
@@ -4176,7 +4180,7 @@ function Dashboard() {
               tasks={tasks}
               onTaskUpdated={handleTaskUpdated}
               onTaskDeleted={handleTaskDeleted}
-              setCurrentView={setCurrentView}
+              navigateToView={navigateToView}
             />
           </div>
         )}        {currentView === 'agenda' && (
@@ -4213,9 +4217,7 @@ function Dashboard() {
               <NewsSection darkMode={darkMode} />
             </div>
           </div>
-        )}
-
-        {currentView === 'settings' && (
+        )}        {currentView === 'settings' && (
           <div style={{ 
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
@@ -4226,6 +4228,38 @@ function Dashboard() {
             marginRight: '-2rem'
           }}>
             <SettingsView darkMode={darkMode} toggleDarkMode={toggleDarkMode} user={user} />
+          </div>
+        )}
+
+        {/* View padrão para casos não tratados */}
+        {!['news', 'tasks', 'agenda', 'noticias', 'settings'].includes(currentView) && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            padding: '2rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem',
+            textAlign: 'center'
+          }}>
+            <h3>⚠️ Página não encontrada</h3>
+            <p>A página solicitada não existe.</p>
+            <button 
+              onClick={() => setCurrentView('news')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#007bff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginTop: '1rem'
+              }}
+            >
+              🏠 Voltar ao Início
+            </button>
           </div>
         )}
       </main>

@@ -1,3 +1,2 @@
-✅ tirar da main page o noticias tarefas e eventos e coolocar noo header
-✅ retirar o butao d header de criar tarefa e cooolocar no h3 onde diz tarefas
-✅ adiciona filtros na propria pagina das tarefas; e coloca o butao atrasasdsa do genero do adicionar tarefa que ira mostrar apenas as tarefas que estao atrasadas
+✅ dependendo da pagina onde e criada a tarefa apos criar tenho que ficar nessa pagina
+

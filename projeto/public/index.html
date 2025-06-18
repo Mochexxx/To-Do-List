@@ -2062,32 +2062,10 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
         : [...prev, categoryId]
     );
   };
-
   return (
     <div style={{ padding: '1rem', maxWidth: '600px' }}>
       <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>⚙️ Configurações</h3>
       
-      {/* Aparência */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Aparência</h4>
-        <div style={{ 
-          padding: '1rem', 
-          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
-          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
-          borderRadius: '8px'
-        }}>
-          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-            <input 
-              type="checkbox" 
-              checked={darkMode} 
-              onChange={toggleDarkMode}
-              style={{ marginRight: '0.5rem' }}
-            />
-            <span style={{ color: darkMode ? '#fff' : '#333' }}>Modo escuro</span>
-          </label>
-        </div>
-      </div>
-
       {/* Notificações */}
       <div style={{ marginBottom: '2rem' }}>
         <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Notificações</h4>
@@ -2140,31 +2118,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
                   {category.icon} {category.name}
                 </span>
               </label>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Informações da Conta */}
-      <div>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Informações da Conta</h4>
-        <div style={{ 
-          padding: '1rem', 
-          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
-          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
-          borderRadius: '8px'
-        }}>
-          <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#fff' : '#333' }}>
-            <strong>Nome:</strong> {user?.username}
-          </p>
-          <p style={{ margin: '0 0 0.5rem 0', color: darkMode ? '#fff' : '#333' }}>
-            <strong>Email:</strong> {user?.email}
-          </p>
-          {user?.country && (
-            <p style={{ margin: '0', color: darkMode ? '#fff' : '#333' }}>
-              <strong>País:</strong> {countries.find(c => c.code === user.country)?.flag} {countries.find(c => c.code === user.country)?.name}
-            </p>
-          )}
+            ))}          </div>
         </div>
       </div>
     </div>
@@ -2175,15 +2129,12 @@ function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
-  const [stats, setStats] = React.useState({});
-  const [darkMode, setDarkMode] = React.useState(false);
-  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
 
   const menuItems = [
     { id: 'news', name: 'Notícias', icon: '📰' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
-    { id: 'agenda', name: 'Agenda', icon: '📅' },
-    { id: 'settings', name: 'Configurações', icon: '⚙️' }
+    { id: 'agenda', name: 'Agenda', icon: '📅' }
   ];
   React.useEffect(() => {
     loadTasks();
@@ -2238,12 +2189,9 @@ function Dashboard() {
   const handleLogout = () => {
     authService.logout();
     window.location.reload();
-  };
-
-  const toggleProfileMenu = () => {
+  };  const toggleProfileMenu = () => {
     setShowProfileMenu(!showProfileMenu);
   };
-
   // Close profile menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -2364,8 +2312,7 @@ function Dashboard() {
                     </div>
                   </div>
                   
-                  <div style={{ padding: '0.5rem 0' }}>
-                    <button
+                  <div style={{ padding: '0.5rem 0' }}>                    <button
                       onClick={() => {
                         setCurrentView('profile');
                         setShowProfileMenu(false);
@@ -2393,36 +2340,6 @@ function Dashboard() {
                     >
                       <span>👤</span>
                       <span>Ver Perfil</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setCurrentView('settings');
-                        setShowProfileMenu(false);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: darkMode ? '#fff' : '#000',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        fontSize: '0.9rem',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = darkMode ? '#333' : '#f5f5f5';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <span>⚙️</span>
-                      <span>Configurações</span>
                     </button>
                     
                     <div style={{ 
@@ -2461,11 +2378,38 @@ function Dashboard() {
                       <span>Sair</span>
                     </button>
                   </div>
-                </div>
-              )}
+                </div>              )}
             </div>
           )}
-            <button 
+            {/* Botão de Configurações */}
+          <button 
+            onClick={() => setCurrentView('settings')}
+            style={{ 
+              width: 40, height: 40, borderRadius: '50%', border: 'none',
+              background: currentView === 'settings' ? (darkMode ? '#444' : '#e0e0e0') : (darkMode ? '#333' : '#f0f0f0'), 
+              color: darkMode ? '#fff' : '#333', 
+              fontSize: '1.2rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginRight: '0.5rem'
+            }}
+            title="Configurações"
+            onMouseEnter={(e) => {
+              if (currentView !== 'settings') {
+                e.target.style.backgroundColor = darkMode ? '#3a3a3a' : '#e8e8e8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentView !== 'settings') {
+                e.target.style.backgroundColor = darkMode ? '#333' : '#f0f0f0';
+              }
+            }}
+          >
+            ⚙️
+          </button>
+          
+            <button
             onClick={toggleDarkMode}
             style={{ 
               width: 40, height: 40, borderRadius: '50%', border: 'none',

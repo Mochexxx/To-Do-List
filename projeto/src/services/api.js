@@ -815,11 +815,295 @@ const taskValidationService = {
   }
 };
 
+// Events Service for agenda management
+const eventsService = {
+  async getEvents() {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events`);
+        return response.events || [];
+      } else {
+        // Modo offline - usar localStorage
+        const events = localStorage.getItem('agenda_events');
+        return events ? JSON.parse(events) : [];
+      }
+    } catch (error) {
+      console.error('Erro ao buscar eventos:', error);
+      return [];
+    }
+  },
+
+  async saveEvents(events) {
+    try {
+      if (authService.isOnlineMode) {
+        // Em modo online, cada evento é salvo individualmente via API
+        // Esta função é mais para modo offline
+        localStorage.setItem('agenda_events', JSON.stringify(events));
+      } else {
+        localStorage.setItem('agenda_events', JSON.stringify(events));
+      }
+    } catch (error) {
+      console.error('Erro ao salvar eventos:', error);
+    }
+  },
+
+  async addEvent(eventData) {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events`, {
+          method: 'POST',
+          body: JSON.stringify(eventData)
+        });
+        return response.event;
+      } else {
+        // Modo offline - usar localStorage
+        const events = await this.getEvents();
+        const newEvent = {
+          id: Date.now(),
+          title: eventData.title || '',
+          description: eventData.description || '',
+          date: eventData.date || '',
+          time: eventData.time || '',
+          type: eventData.type || 'event',
+          priority: eventData.priority || 'medium',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: authService.getUser()?.id || null
+        };
+        
+        events.push(newEvent);
+        await this.saveEvents(events);
+        return newEvent;
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar evento:', error);
+      throw error;
+    }
+  },
+
+  async updateEvent(eventId, updateData) {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events/${eventId}`, {
+          method: 'PUT',
+          body: JSON.stringify(updateData)
+        });
+        return response.event;
+      } else {
+        // Modo offline - usar localStorage
+        const events = await this.getEvents();
+        const eventIndex = events.findIndex(event => event.id === eventId);
+        
+        if (eventIndex === -1) {
+          throw new Error('Evento não encontrado');
+        }
+
+        events[eventIndex] = {
+          ...events[eventIndex],
+          ...updateData,
+          updatedAt: new Date().toISOString()
+        };
+        
+        await this.saveEvents(events);
+        return events[eventIndex];
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar evento:', error);
+      throw error;
+    }
+  },
+
+  async deleteEvent(eventId) {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events/${eventId}`, {
+          method: 'DELETE'
+        });
+        return response;
+      } else {
+        // Modo offline - usar localStorage
+        const events = await this.getEvents();
+        const filteredEvents = events.filter(event => event.id !== eventId);
+        await this.saveEvents(filteredEvents);
+        return { message: 'Evento eliminado com sucesso' };
+      }
+    } catch (error) {
+      console.error('Erro ao eliminar evento:', error);
+      throw error;
+    }
+  },
+
+  async getEventsByDate(date) {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events?date=${date}`);
+        return response.events || [];
+      } else {
+        // Modo offline - filtrar eventos locais
+        const events = await this.getEvents();
+        return events.filter(event => event.date === date)
+                     .sort((a, b) => a.time.localeCompare(b.time));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar eventos por data:', error);
+      return [];
+    }
+  },
+
+  async getEventsByDateRange(startDate, endDate) {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar backend real
+        const response = await makeRequest(`${API_BASE_URL}/events?startDate=${startDate}&endDate=${endDate}`);
+        return response.events || [];
+      } else {
+        // Modo offline - filtrar eventos locais
+        const events = await this.getEvents();
+        return events.filter(event => {
+          return event.date >= startDate && event.date <= endDate;
+        }).sort((a, b) => {
+          if (a.date === b.date) {
+            return a.time.localeCompare(b.time);
+          }
+          return a.date.localeCompare(b.date);
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar eventos por intervalo:', error);
+      return [];
+    }
+  },
+
+  async getTodayEvents() {
+    const today = new Date().toISOString().split('T')[0];
+    return await this.getEventsByDate(today);
+  },
+
+  async getUpcomingEvents(days = 7) {
+    const today = new Date();
+    const futureDate = new Date(today.getTime() + (days * 24 * 60 * 60 * 1000));
+    
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = futureDate.toISOString().split('T')[0];
+    
+    return await this.getEventsByDateRange(startDate, endDate);
+  },
+
+  async hasEventsOnDate(date) {
+    const events = await this.getEventsByDate(date);
+    return events.length > 0;
+  },
+
+  async getEventStats() {
+    try {
+      if (authService.isOnlineMode) {
+        // Modo online - usar endpoint de estatísticas
+        const response = await makeRequest(`${API_BASE_URL}/events/stats`);
+        return response.stats;
+      } else {
+        // Modo offline - calcular estatísticas localmente
+        const events = await this.getEvents();
+        const today = new Date().toISOString().split('T')[0];
+        
+        return {
+          total: events.length,
+          today: events.filter(e => e.date === today).length,
+          upcoming: events.filter(e => e.date > today).length,
+          past: events.filter(e => e.date < today).length,
+          byType: events.reduce((acc, event) => {
+            acc[event.type] = (acc[event.type] || 0) + 1;
+            return acc;
+          }, {}),
+          byPriority: events.reduce((acc, event) => {
+            acc[event.priority] = (acc[event.priority] || 0) + 1;
+            return acc;
+          }, {})
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao obter estatísticas:', error);
+      return {
+        total: 0,
+        today: 0,
+        upcoming: 0,
+        past: 0,
+        byType: {},
+        byPriority: {}
+      };
+    }
+  },
+
+  exportEvents(format = 'json') {
+    // Esta função sempre usa dados locais para exportação
+    const events = localStorage.getItem('agenda_events');
+    const eventsData = events ? JSON.parse(events) : [];
+    
+    if (format === 'json') {
+      return JSON.stringify(eventsData, null, 2);
+    } else if (format === 'csv') {
+      let csv = 'ID,Título,Descrição,Data,Hora,Tipo,Prioridade\n';
+      eventsData.forEach(event => {
+        csv += `${event.id},"${event.title}","${event.description || ''}",${event.date},${event.time},${event.type},${event.priority}\n`;
+      });
+      return csv;
+    }
+    
+    throw new Error('Formato não suportado');
+  },
+
+  async importEvents(eventsData) {
+    try {
+      const events = Array.isArray(eventsData) ? eventsData : JSON.parse(eventsData);
+      
+      // Validar estrutura dos eventos
+      const validEvents = events.filter(event => 
+        event.title && event.date && event.time
+      ).map(event => ({
+        ...event,
+        id: event.id || Date.now() + Math.random(),
+        createdAt: event.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
+      if (authService.isOnlineMode) {
+        // Modo online - criar eventos via API
+        const response = await makeRequest(`${API_BASE_URL}/events/bulk`, {
+          method: 'POST',
+          body: JSON.stringify({ events: validEvents })
+        });
+        return response.events;
+      } else {
+        // Modo offline - salvar diretamente
+        await this.saveEvents(validEvents);
+        return validEvents;
+      }
+    } catch (error) {
+      console.error('Erro ao importar eventos:', error);
+      throw new Error('Erro ao importar eventos: ' + error.message);
+    }
+  },
+
+  clearAllEvents() {
+    if (confirm('Tem certeza que deseja eliminar TODOS os eventos? Esta ação não pode ser desfeita.')) {
+      localStorage.removeItem('agenda_events');
+      return true;
+    }
+    return false;
+  }
+};
+
 // Export for use in HTML
 window.authService = authService;
 window.tasksService = tasksService;
 window.storageService = storageService;
 window.taskValidationService = taskValidationService;
+window.eventsService = eventsService;
+window.eventsService = eventsService;
 
 // Inicializar o serviço de autenticação quando a página carrega
 document.addEventListener('DOMContentLoaded', async () => {

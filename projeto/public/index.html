@@ -19,6 +19,15 @@
             #root { 
                 min-height: 100vh;
             }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            
+            .loading-spinner {
+                animation: spin 1s linear infinite;
+            }
         </style>
     </head>
     <body>        <div id="root"></div>
@@ -2538,98 +2547,904 @@ function TasksSidebar({ tasks, darkMode, onTaskUpdated }) {
 
 // Componente de Agenda
 function AgendaView({ darkMode }) {
-  const [events, setEvents] = React.useState([
-    {
-      id: 1,
-      title: "Reunião de equipe",
-      date: new Date().toISOString().split('T')[0],
-      time: "09:00",
-      description: "Reunião semanal da equipe de desenvolvimento"
-    },
-    {
-      id: 2,
-      title: "Apresentação do projeto",
-      date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-      time: "14:30",
-      description: "Apresentação do projeto para o cliente"
-    },
-    {
-      id: 3,
-      title: "Workshop de React",
-      date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-      time: "10:00",
-      description: "Workshop sobre as últimas funcionalidades do React"
-    }
-  ]);
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [events, setEvents] = React.useState([]);
+  const [showEventForm, setShowEventForm] = React.useState(false);
+  const [editingEvent, setEditingEvent] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [eventForm, setEventForm] = React.useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    type: 'event',
+    priority: 'medium'
+  });
 
-  const today = new Date().toISOString().split('T')[0];
-  const todayEvents = events.filter(event => event.date === today);
-  const upcomingEvents = events.filter(event => event.date > today);
+  // Carregar eventos usando o eventsService
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const loadedEvents = await window.eventsService.getEvents();
+      setEvents(loadedEvents);
+      
+      // Se não há eventos e estamos em modo offline, criar eventos de exemplo
+      if (loadedEvents.length === 0 && !window.authService.isOnlineMode) {
+        const sampleEvents = [
+          {
+            title: "Reunião de equipe",
+            description: "Reunião semanal da equipe de desenvolvimento",
+            date: new Date().toISOString().split('T')[0],
+            time: "09:00",
+            type: "meeting",
+            priority: "high"
+          },
+          {
+            title: "Apresentação do projeto",
+            description: "Apresentação do projeto para o cliente",
+            date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+            time: "14:30",
+            type: "presentation",
+            priority: "high"
+          }
+        ];
+        
+        // Criar eventos de exemplo
+        for (const eventData of sampleEvents) {
+          await window.eventsService.addEvent(eventData);
+        }
+        
+        // Recarregar eventos após criar exemplos
+        const updatedEvents = await window.eventsService.getEvents();
+        setEvents(updatedEvents);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar eventos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadEvents();
+  }, []);
+
+  // Funções do calendário
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const isToday = (day) => {
+    const today = new Date();
+    return day === today.getDate() && 
+           currentDate.getMonth() === today.getMonth() && 
+           currentDate.getFullYear() === today.getFullYear();
+  };
+
+  const isSelected = (day) => {
+    return day === selectedDate.getDate() && 
+           currentDate.getMonth() === selectedDate.getMonth() && 
+           currentDate.getFullYear() === selectedDate.getFullYear();
+  };  const hasEvents = async (day) => {
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    try {
+      return await window.eventsService.hasEventsOnDate(dateStr);
+    } catch (error) {
+      console.error('Erro ao verificar eventos:', error);
+      // Fallback para verificação local
+      return events.some(event => event.date === dateStr);
+    }
+  };
+
+  const navigateMonth = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(currentDate.getMonth() + direction);
+    setCurrentDate(newDate);
+  };
+
+  const navigateYear = (direction) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(currentDate.getFullYear() + direction);
+    setCurrentDate(newDate);
+  };
+
+  const selectDate = (day) => {
+    const newSelectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setSelectedDate(newSelectedDate);
+  };
+
+  // Funções dos eventos
+  const getSelectedDateEvents = () => {
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+    return events.filter(event => event.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+  };
+
+  const handleEventSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!eventForm.title || !eventForm.date || !eventForm.time) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (editingEvent) {
+        // Editar evento existente
+        await window.eventsService.updateEvent(editingEvent.id, eventForm);
+      } else {
+        // Criar novo evento
+        await window.eventsService.addEvent(eventForm);
+      }
+
+      // Recarregar eventos após a operação
+      await loadEvents();
+
+      // Reset form
+      setEventForm({ title: '', description: '', date: '', time: '', type: 'event', priority: 'medium' });
+      setEditingEvent(null);
+      setShowEventForm(false);
+    } catch (error) {
+      console.error('Erro ao salvar evento:', error);
+      alert('Erro ao salvar evento. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const editEvent = (event) => {
+    setEventForm(event);
+    setEditingEvent(event);
+    setShowEventForm(true);
+  };
+
+  const deleteEvent = async (eventId) => {
+    if (confirm('Tem certeza que deseja eliminar este evento?')) {
+      try {
+        setLoading(true);
+        await window.eventsService.deleteEvent(eventId);
+        await loadEvents(); // Recarregar eventos após deletar
+      } catch (error) {
+        console.error('Erro ao eliminar evento:', error);
+        alert('Erro ao eliminar evento. Tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  const openNewEventForm = () => {
+    // Sempre usar o dia atualmente selecionado no calendário
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+    
+    setEventForm({
+      title: '',
+      description: '',
+      date: dateStr,
+      time: '',
+      type: 'event',
+      priority: 'medium'
+    });
+    setEditingEvent(null);
+    setShowEventForm(true);
+  };
+  // Componente para cada dia do calendário
+  const CalendarDay = ({ day, isEmpty = false }) => {
+    const [dayHasEvents, setDayHasEvents] = React.useState(false);
+
+    React.useEffect(() => {
+      if (!isEmpty) {
+        const checkEvents = async () => {
+          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          // Verificação local primeiro (mais rápida)
+          const localHasEvents = events.some(event => event.date === dateStr);
+          setDayHasEvents(localHasEvents);
+          
+          // Verificação via serviço (para modo online)
+          try {
+            const serviceHasEvents = await window.eventsService.hasEventsOnDate(dateStr);
+            if (serviceHasEvents !== localHasEvents) {
+              setDayHasEvents(serviceHasEvents);
+            }
+          } catch (error) {
+            console.error('Erro ao verificar eventos via serviço:', error);
+          }
+        };
+        
+        checkEvents();
+      }
+    }, [day, isEmpty, events, currentDate]);
+
+    if (isEmpty) {
+      return <div style={{ height: '40px' }}></div>;
+    }
+
+    return (
+      <div
+        onClick={() => selectDate(day)}
+        style={{
+          height: '40px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          backgroundColor: isSelected(day) ? '#007bff' : (isToday(day) ? '#28a745' : 'transparent'),
+          color: isSelected(day) || isToday(day) ? 'white' : (darkMode ? '#fff' : '#333'),
+          borderRadius: '4px',
+          position: 'relative',
+          border: `1px solid ${darkMode ? '#555' : '#e0e0e0'}`,
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected(day) && !isToday(day)) {
+            e.currentTarget.style.backgroundColor = darkMode ? '#444' : '#f0f0f0';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected(day) && !isToday(day)) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }
+        }}
+      >
+        <span style={{ fontSize: '0.9rem', fontWeight: isToday(day) ? 'bold' : 'normal' }}>
+          {day}
+        </span>
+        {dayHasEvents && (
+          <div style={{
+            width: '6px',
+            height: '6px',
+            backgroundColor: isSelected(day) || isToday(day) ? 'white' : '#007bff',
+            borderRadius: '50%',
+            position: 'absolute',
+            bottom: '3px'
+          }}></div>
+        )}
+      </div>
+    );
+  };
+
+  // Renderizar calendário
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
+
+    // Dias em branco do mês anterior
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<CalendarDay key={`empty-${i}`} day={0} isEmpty={true} />);
+    }
+
+    // Dias do mês atual
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(<CalendarDay key={day} day={day} />);
+    }
+
+    return days;
+  };
+
+  const getEventTypeIcon = (type) => {
+    const icons = {
+      'event': '📅',
+      'meeting': '🤝',
+      'task': '✅',
+      'reminder': '🔔',
+      'presentation': '📊',
+      'appointment': '👨‍⚕️',
+      'birthday': '🎂',
+      'holiday': '🏖️'
+    };
+    return icons[type] || '📅';
+  };
+
+  const getPriorityColor = (priority) => {
+    const colors = {
+      'low': '#28a745',
+      'medium': '#ffc107',
+      'high': '#dc3545'
+    };
+    return colors[priority] || '#6c757d';
+  };
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>📅 Agenda Pessoal</h3>
-      
-      {/* Eventos de Hoje */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Hoje</h4>
-        {todayEvents.length > 0 ? (
-          todayEvents.map(event => (
-            <div key={event.id} style={{
-              padding: '1rem',
-              backgroundColor: darkMode ? '#3a3a3a' : '#e8f5e8',
-              border: `1px solid ${darkMode ? '#555' : '#c3e6c3'}`,
-              borderRadius: '8px',
-              marginBottom: '0.5rem'
+    <div style={{ 
+      padding: '1rem', 
+      display: 'grid', 
+      gridTemplateColumns: '1fr 400px', 
+      gap: '2rem',
+      height: 'calc(100vh - 200px)'
+    }}>
+      {/* Calendário */}
+      <div style={{
+        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        border: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        {/* Header do Calendário */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '1.5rem' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              onClick={() => navigateYear(-1)}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: 'transparent',
+                border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: darkMode ? '#fff' : '#333'
+              }}
+            >
+              ⏪
+            </button>
+            <button
+              onClick={() => navigateMonth(-1)}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: 'transparent',
+                border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: darkMode ? '#fff' : '#333'
+              }}
+            >
+              ◀
+            </button>
+            
+            <h3 style={{ 
+              margin: 0, 
+              color: darkMode ? '#fff' : '#333',
+              minWidth: '200px',
+              textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h5 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>{event.title}</h5>
-                <span style={{ color: darkMode ? '#ccc' : '#666', fontWeight: 'bold' }}>{event.time}</span>
-              </div>
-              <p style={{ margin: '0.5rem 0 0 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
-                {event.description}
-              </p>
+              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h3>
+            
+            <button
+              onClick={() => navigateMonth(1)}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: 'transparent',
+                border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: darkMode ? '#fff' : '#333'
+              }}
+            >
+              ▶
+            </button>
+            <button
+              onClick={() => navigateYear(1)}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: 'transparent',
+                border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                color: darkMode ? '#fff' : '#333'
+              }}
+            >
+              ⏩
+            </button>
+          </div>
+          
+          <button
+            onClick={() => {
+              setCurrentDate(new Date());
+              setSelectedDate(new Date());
+            }}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Hoje
+          </button>
+        </div>
+
+        {/* Dias da Semana */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(7, 1fr)', 
+          gap: '4px', 
+          marginBottom: '0.5rem' 
+        }}>
+          {weekDays.map(day => (
+            <div 
+              key={day} 
+              style={{ 
+                textAlign: 'center', 
+                fontWeight: 'bold', 
+                color: darkMode ? '#ccc' : '#666',
+                padding: '0.5rem',
+                fontSize: '0.9rem'
+              }}
+            >
+              {day}
             </div>
-          ))
-        ) : (
-          <p style={{ color: darkMode ? '#999' : '#666', fontStyle: 'italic' }}>
-            Nenhum evento agendado para hoje
-          </p>
-        )}
+          ))}
+        </div>
+
+        {/* Dias do Mês */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(7, 1fr)', 
+          gap: '4px' 
+        }}>
+          {renderCalendar()}
+        </div>
+
+        {/* Legenda */}
+        <div style={{ 
+          marginTop: '1rem', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '2rem',
+          fontSize: '0.8rem',
+          color: darkMode ? '#ccc' : '#666'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '12px', height: '12px', backgroundColor: '#28a745', borderRadius: '50%' }}></div>
+            <span>Hoje</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '12px', height: '12px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
+            <span>Selecionado</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '6px', height: '6px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
+            <span>Com eventos</span>
+          </div>
+        </div>
       </div>
 
-      {/* Próximos Eventos */}
-      <div>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Próximos Eventos</h4>
-        {upcomingEvents.length > 0 ? (
-          upcomingEvents.map(event => (
-            <div key={event.id} style={{
-              padding: '1rem',
-              backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
-              border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
-              borderRadius: '8px',
-              marginBottom: '0.5rem'
+      {/* Dashboard de Eventos */}
+      <div style={{
+        backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        border: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>        {/* Header do Dashboard */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '1.5rem',
+          borderBottom: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
+          paddingBottom: '1rem'
+        }}>
+          <h3 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>
+            📅 Eventos - {selectedDate.toLocaleDateString('pt-PT')}
+            {loading && (
+              <span style={{ 
+                marginLeft: '0.5rem', 
+                fontSize: '0.8rem', 
+                color: darkMode ? '#ccc' : '#666' 
+              }}>
+                🔄 Carregando...
+              </span>
+            )}
+          </h3>
+          <button
+            onClick={openNewEventForm}
+            disabled={loading}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: loading ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '0.9rem',
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            + Novo Evento
+          </button>
+        </div>
+
+        {/* Lista de Eventos */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>          {loading ? (
+            <div style={{ 
+              textAlign: 'center', 
+              color: darkMode ? '#999' : '#666',
+              padding: '2rem'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h5 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>{event.title}</h5>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
-                    {new Date(event.date).toLocaleDateString('pt-PT')}
+              <div className="loading-spinner" style={{ 
+                fontSize: '2rem', 
+                marginBottom: '1rem'
+              }}>
+                🔄
+              </div>
+              <div>Carregando eventos...</div>
+            </div>
+          ) : getSelectedDateEvents().length > 0 ? (
+            getSelectedDateEvents().map(event => (
+              <div
+                key={event.id}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
+                  border: `1px solid ${darkMode ? '#555' : '#e0e0e0'}`,
+                  borderLeft: `4px solid ${getPriorityColor(event.priority)}`,
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}
+              >
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'flex-start',
+                  marginBottom: '0.5rem'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem',
+                      marginBottom: '0.25rem'
+                    }}>
+                      <span>{getEventTypeIcon(event.type)}</span>
+                      <h4 style={{ 
+                        margin: 0, 
+                        color: darkMode ? '#fff' : '#333',
+                        fontSize: '1rem'
+                      }}>
+                        {event.title}
+                      </h4>
+                    </div>
+                    <div style={{ 
+                      color: darkMode ? '#ccc' : '#666',
+                      fontSize: '0.9rem',
+                      fontWeight: 'bold',
+                      marginBottom: '0.5rem'
+                    }}>
+                      🕐 {event.time}
+                    </div>
+                    {event.description && (
+                      <p style={{ 
+                        margin: 0, 
+                        color: darkMode ? '#ccc' : '#666',
+                        fontSize: '0.85rem',
+                        lineHeight: '1.4'
+                      }}>
+                        {event.description}
+                      </p>
+                    )}
                   </div>
-                  <div style={{ color: darkMode ? '#ccc' : '#666', fontWeight: 'bold' }}>{event.time}</div>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                    <button
+                      onClick={() => editEvent(event)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => deleteEvent(event.id)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               </div>
-              <p style={{ margin: '0.5rem 0 0 0', color: darkMode ? '#ccc' : '#666', fontSize: '0.9rem' }}>
-                {event.description}
-              </p>
+            ))
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              color: darkMode ? '#999' : '#666',
+              fontStyle: 'italic',
+              padding: '2rem'
+            }}>
+              Nenhum evento agendado para este dia.
+              <br />
+              <button
+                onClick={openNewEventForm}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Criar primeiro evento
+              </button>
             </div>
-          ))
-        ) : (
-          <p style={{ color: darkMode ? '#999' : '#666', fontStyle: 'italic' }}>
-            Nenhum evento próximo agendado
-          </p>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Modal de Formulário de Evento */}
+      {showEventForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '500px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            border: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`
+          }}>
+            <h3 style={{ 
+              margin: '0 0 1.5rem 0', 
+              color: darkMode ? '#fff' : '#333'
+            }}>
+              {editingEvent ? 'Editar Evento' : 'Novo Evento'}
+            </h3>
+            
+            <form onSubmit={handleEventSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem',
+                  color: darkMode ? '#ccc' : '#555',
+                  fontWeight: 'bold'
+                }}>
+                  Título *
+                </label>
+                <input
+                  type="text"
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({...eventForm, title: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                    borderRadius: '4px',
+                    backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                    color: darkMode ? '#fff' : '#333'
+                  }}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '0.5rem',
+                  color: darkMode ? '#ccc' : '#555',
+                  fontWeight: 'bold'
+                }}>
+                  Descrição
+                </label>
+                <textarea
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({...eventForm, description: e.target.value})}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                    borderRadius: '4px',
+                    backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                    color: darkMode ? '#fff' : '#333',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    color: darkMode ? '#ccc' : '#555',
+                    fontWeight: 'bold'
+                  }}>
+                    Data *
+                  </label>
+                  {!editingEvent && (
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: darkMode ? '#999' : '#666',
+                      marginBottom: '0.25rem',
+                      fontStyle: 'italic'
+                    }}>
+                      📅 Dia selecionado: {selectedDate.toLocaleDateString('pt-PT')}
+                    </div>
+                  )}
+                  <input
+                    type="date"
+                    value={eventForm.date}
+                    onChange={(e) => setEventForm({...eventForm, date: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                      borderRadius: '4px',
+                      backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                      color: darkMode ? '#fff' : '#333'
+                    }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    color: darkMode ? '#ccc' : '#555',
+                    fontWeight: 'bold'
+                  }}>
+                    Hora *
+                  </label>
+                  <input
+                    type="time"
+                    value={eventForm.time}
+                    onChange={(e) => setEventForm({...eventForm, time: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                      borderRadius: '4px',
+                      backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                      color: darkMode ? '#fff' : '#333'
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    color: darkMode ? '#ccc' : '#555',
+                    fontWeight: 'bold'
+                  }}>
+                    Tipo
+                  </label>
+                  <select
+                    value={eventForm.type}
+                    onChange={(e) => setEventForm({...eventForm, type: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                      borderRadius: '4px',
+                      backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                      color: darkMode ? '#fff' : '#333'
+                    }}
+                  >
+                    <option value="event">📅 Evento</option>
+                    <option value="meeting">🤝 Reunião</option>
+                    <option value="task">✅ Tarefa</option>
+                    <option value="reminder">🔔 Lembrete</option>
+                    <option value="presentation">📊 Apresentação</option>
+                    <option value="appointment">👨‍⚕️ Consulta</option>
+                    <option value="birthday">🎂 Aniversário</option>
+                    <option value="holiday">🏖️ Feriado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    color: darkMode ? '#ccc' : '#555',
+                    fontWeight: 'bold'
+                  }}>
+                    Prioridade
+                  </label>
+                  <select
+                    value={eventForm.priority}
+                    onChange={(e) => setEventForm({...eventForm, priority: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                      borderRadius: '4px',
+                      backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                      color: darkMode ? '#fff' : '#333'
+                    }}
+                  >
+                    <option value="low">🟢 Baixa</option>
+                    <option value="medium">🟡 Média</option>
+                    <option value="high">🔴 Alta</option>
+                  </select>
+                </div>
+              </div>              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEventForm(false);
+                    setEditingEvent(null);
+                    setEventForm({ title: '', description: '', date: '', time: '', type: 'event', priority: 'medium' });
+                  }}
+                  disabled={loading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: loading ? '#6c757d' : '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {loading && <span className="loading-spinner">🔄</span>}
+                  {editingEvent ? 'Atualizar' : 'Criar'} Evento
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1520,7 +1520,7 @@ function NewsSection({ darkMode = false }) {
   );
 }
 
-function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
+function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted, setCurrentView }) {
   const [filteredTasks, setFilteredTasks] = React.useState([]);
   const [filterStatus, setFilterStatus] = React.useState('todas');
   const [filterPriority, setFilterPriority] = React.useState('todas');
@@ -1547,7 +1547,26 @@ function TasksDashboard({ tasks, onTaskUpdated, onTaskDeleted }) {
 
   return (
     <div>
-      <h3 style={{ marginBottom: '1rem' }}>📋 Dashboard de Tarefas</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>📋 Dashboard de Tarefas</h3>        <button 
+          onClick={() => setCurrentView('create')}
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.3rem',
+            padding: '0.5rem 1rem', 
+            backgroundColor: '#28a745', 
+            color: '#fff', 
+            border: 'none', 
+            borderRadius: '6px', 
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+          title="Criar Nova Tarefa"
+        >
+          ➕ Nova Tarefa
+        </button>
+      </div>
       
       {/* Mini Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -3769,25 +3788,6 @@ function Dashboard() {
           ))}
         </div>          {/* Informações do utilizador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {/* Botão Nova Tarefa */}
-          <button 
-            onClick={() => setCurrentView('create')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.3rem',
-              padding: '0.5rem 1rem', 
-              backgroundColor: '#28a745', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: '6px', 
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            ➕ Nova Tarefa
-          </button>
-          
           {user && (
             <div className="profile-menu-container" style={{ position: 'relative' }}>
               <div 
@@ -3995,9 +3995,26 @@ function Dashboard() {
               border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
               overflow: 'hidden',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{ padding: '1rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
+            }}>              <div style={{ padding: '1rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>📋 Tarefas</h3>
+                <button 
+                  onClick={() => setCurrentView('create')}
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                    padding: '0.4rem 0.8rem', 
+                    backgroundColor: '#28a745', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Criar Nova Tarefa"
+                >
+                  ➕
+                </button>
               </div>
               <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '1rem' }}>
                 <TasksSidebar tasks={tasks} darkMode={darkMode} onTaskUpdated={handleTaskUpdated} />
@@ -4013,11 +4030,11 @@ function Dashboard() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             marginLeft: '-3rem',
             marginRight: '-2rem'
-          }}>
-            <TasksDashboard
+          }}>            <TasksDashboard
               tasks={tasks}
               onTaskUpdated={handleTaskUpdated}
               onTaskDeleted={handleTaskDeleted}
+              setCurrentView={setCurrentView}
             />
           </div>
         )}        {currentView === 'agenda' && (

@@ -25,21 +25,38 @@ python -m http.server 8000
 Depois abra: `http://localhost:8000`
 
 ### Com Base de Dados (Completo)
-1. Configure o MongoDB:
-   ```bash
-   # Verificar caminho do MongoDB
-   check-mongodb-path.bat
+1. Instale e inicie o MongoDB:
+   ```powershell
+   # Instalar MongoDB (caso não esteja instalado)
+   # Via chocolatey:
+   choco install mongodb
    
+   # Ou baixe diretamente do site oficial:
+   # https://www.mongodb.com/try/download/community
+
    # Iniciar MongoDB
-   start-mongodb.bat
+   # Se instalado como serviço:
+   Start-Service MongoDB
+   
+   # Ou manualmente:
+   "C:\Program Files\MongoDB\Server\6.0\bin\mongod.exe" --dbpath="C:\data\db"
    ```
 
-2. Inicie o backend:
+2. Colocar a API do NewsAPI no arquivo `backend/config.js`:
+   ```javascript
+   // Colocar Aqui a Api do newsApi
+   const NEWS_API_KEY = '+++++++++YOUR_API_KEY+++++++++';
+   ```
+   const NEWS_API_URL = 'https://newsapi.org/v2';
+   
+
+3. Inicie o backend:
    ```bash
    cd backend
    npm install
    npm start
    ```
+
 
 ## Tecnologias
 - React 18

@@ -15,11 +15,12 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/todolist', {
+const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/todolist';
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('Connected to MongoDB'))
+.then(() => console.log(`Connected to MongoDB at ${mongoUri}`))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes

@@ -134,13 +134,12 @@ const authService = {
   },
 
   async register(userData) {
-    try {
-      if (this.isOnlineMode) {
+    try {      if (this.isOnlineMode) {
         // Modo online - usar backend real
         const response = await makeRequest(`${API_BASE_URL}/auth/register`, {
           method: 'POST',
           body: JSON.stringify({
-            username: userData.username,
+            name: userData.name || userData.username, // Backend espera 'name'
             email: userData.email,
             password: userData.password,
             country: userData.country,

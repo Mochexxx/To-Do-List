@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 function TaskForm({ task, onSave, onCancel }) {
+  // Access tasksService from global window object
+  const tasksService = window.tasksService;
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -81,13 +83,16 @@ function TaskForm({ task, onSave, onCancel }) {
       let savedTask;
       if (isEditing) {
         savedTask = await tasksService.updateTask(task._id, taskData);
+        alert('Tarefa atualizada com sucesso!');
       } else {
         savedTask = await tasksService.createTask(taskData);
+        alert('Tarefa criada com sucesso!');
       }
 
       onSave(savedTask);
     } catch (error) {
       setErrors({ submit: error.message });
+      alert(`Erro ao guardar tarefa: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -199,11 +204,43 @@ function TaskForm({ task, onSave, onCancel }) {
           max={10080}
         />
         {errors.estimatedDuration && <p style={{ color: 'red' }}>{errors.estimatedDuration}</p>}
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <button type="submit" disabled={loading}>{isEditing ? 'Atualizar' : 'Criar'}</button>
-        <button type="button" onClick={onCancel}>Cancelar</button>
+      </div>      <div style={{ display: 'flex', gap: '1rem' }}>
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: loading ? 'rgb(46, 125, 50)' : 'rgb(76, 175, 80)', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: loading ? 'not-allowed' : 'pointer', 
+            fontSize: '1rem', 
+            fontWeight: '500', 
+            transition: 'background-color 0.2s'
+          }}
+        >
+          {loading ? 'A guardar...' : (isEditing ? 'Atualizar' : 'Criar')}
+        </button>
+        <button 
+          type="button" 
+          onClick={onCancel}
+          style={{
+            width: '100%', 
+            padding: '0.75rem', 
+            backgroundColor: '#6c757d', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '6px', 
+            cursor: 'pointer', 
+            fontSize: '1rem', 
+            fontWeight: '500', 
+            transition: 'background-color 0.2s'
+          }}
+        >
+          Cancelar
+        </button>
       </div>
 
       {errors.submit && <p style={{ color: 'red' }}>{errors.submit}</p>}

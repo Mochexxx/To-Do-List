@@ -5,6 +5,23 @@ const User = require('../models/User');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
+// Função auxiliar para obter timezone por país
+function getTimezoneByCountry(countryCode) {
+  const timezones = {
+    'pt': 'Europe/Lisbon',
+    'br': 'America/Sao_Paulo', 
+    'us': 'America/New_York',
+    'uk': 'Europe/London',
+    'es': 'Europe/Madrid',
+    'fr': 'Europe/Paris',
+    'de': 'Europe/Berlin',
+    'it': 'Europe/Rome',
+    'ca': 'America/Toronto',
+    'au': 'Australia/Sydney'
+  };
+  return timezones[countryCode] || 'UTC';
+}
+
 // Middleware to verify JWT
 const verifyToken = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -26,6 +43,19 @@ const verifyToken = (req, res, next) => {
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, country, countryName, newsCountryCode } = req.body;
+
+    // Validação básica
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        message: 'Nome, email e password são obrigatórios' 
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        message: 'Password deve ter pelo menos 6 caracteres' 
+      });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ 
@@ -49,6 +79,7 @@ router.post('/register', async (req, res) => {
       language: country === 'br' ? 'pt' : country === 'pt' ? 'pt' : 'en',
       timezone: getTimezoneByCountry(country)
     });
+    
     await user.save();
 
     // Generate JWT
@@ -64,6 +95,24 @@ router.post('/register', async (req, res) => {
       user: user.toPublicJSON()
     });
   } catch (error) {
+    console.error('Erro no registro:', error);
+    
+    // Erro de validação do Mongoose
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: 'Dados inválidos', 
+        details: messages 
+      });
+    }
+    
+    // Erro de duplicação (índice único)
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: 'Email já está em uso' 
+      });
+    }
+    
     res.status(500).json({ 
       message: 'Erro interno do servidor', 
       error: error.message 
@@ -296,26 +345,8 @@ router.post('/logout-all', verifyToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       message: 'Erro ao terminar sessões', 
-      error: error.message 
-    });
+      error: error.message    });
   }
 });
-
-// Função auxiliar para obter timezone por país
-function getTimezoneByCountry(countryCode) {
-  const timezones = {
-    'pt': 'Europe/Lisbon',
-    'br': 'America/Sao_Paulo', 
-    'us': 'America/New_York',
-    'uk': 'Europe/London',
-    'es': 'Europe/Madrid',
-    'fr': 'Europe/Paris',
-    'de': 'Europe/Berlin',
-    'it': 'Europe/Rome',
-    'ca': 'America/Toronto',
-    'au': 'Australia/Sydney'
-  };
-  return timezones[countryCode] || 'UTC';
-}
 
 module.exports = router;

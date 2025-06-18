@@ -1051,15 +1051,14 @@ function NewsSection({ darkMode = false }) {
   }, []);
 
   React.useEffect(() => {
-    setNews([]);
-    setPage(1);
+    setNews([]);    setPage(1);
     setHasMore(true);
     setLoading(true);
     setApiStatus('unknown');
     // Carrega a primeira página
     loadNews(1, true);
     // eslint-disable-next-line
-  }, [selectedCategory]);
+  }, [selectedCategory, userCategoryPreferences]);
 
   React.useEffect(() => {
     const ref = newsContainerRef.current;
@@ -1318,12 +1317,12 @@ function NewsSection({ darkMode = false }) {
       return filteredByPreferences;
     }
 
-    // Se nenhuma categoria estiver selecionada, mostrar todas as notícias
+    // Se nenhuma categoria estiver selecionada, mostrar todas as notícias como fallback
     console.log('📰 Nenhuma preferência definida, retornando todos os artigos:', mockArticles.length);
     return mockArticles;
   };  return (
-    <div>
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+    <div>      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Mostrar sempre todas as categorias, independentemente das preferências */}
         {categories.map(category => {
           const isPreferred = userCategoryPreferences.includes(category.id);
           const isSelected = selectedCategory === category.id;
@@ -1340,9 +1339,11 @@ function NewsSection({ darkMode = false }) {
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 position: 'relative',
-                opacity: (category.id === 'general' || isPreferred) ? 1 : 0.6
+                opacity: 1,
+                display: 'inline-flex',
+                alignItems: 'center'
               }}
-              title={isPreferred ? `${category.name} - Nas suas preferências` : category.name}
+              title={isPreferred ? `${category.name} - ⭐ Nas suas preferências` : `${category.name} - Clique para ver notícias desta categoria`}
             >
               {category.icon} {category.name}
               {isPreferred && category.id !== 'general' && (
@@ -1357,43 +1358,19 @@ function NewsSection({ darkMode = false }) {
             </button>
           );
         })}
-      </div>
-        {/* Informação sobre filtros ativos */}
-      {selectedCategory === 'general' && userCategoryPreferences.length > 0 && (
-        <div style={{ 
-          marginBottom: '1rem',
-          padding: '0.75rem',
-          backgroundColor: darkMode ? '#2a4d3a' : '#d4edda',
-          border: `1px solid ${darkMode ? '#4ade80' : '#c3e6cb'}`,
-          borderRadius: '6px',
-          fontSize: '0.85rem',
-          color: darkMode ? '#86efac' : '#155724'
-        }}>
-          <strong>📋 Filtro ativo:</strong> Mostrando apenas notícias das categorias que seleccionou nas configurações: {' '}
-          {userCategoryPreferences.map(catId => {
-            const cat = categories.find(c => c.id === catId);
-            return cat ? `${cat.icon} ${cat.name}` : catId;
-          }).join(', ')}
-          {'. '}
-          <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-            Vá às ⚙️ Configurações para alterar as suas preferências.
-          </span>
-        </div>
-      )}
-
-      {/* Aviso quando nenhuma categoria está selecionada */}
+      </div>{/* Aviso quando nenhuma categoria está selecionada */}
       {selectedCategory === 'general' && userCategoryPreferences.length === 0 && (
         <div style={{ 
           marginBottom: '1rem',
           padding: '0.75rem',
-          backgroundColor: darkMode ? '#4d3a2a' : '#fff3cd',
-          border: `1px solid ${darkMode ? '#d97706' : '#ffeaa7'}`,
+          backgroundColor: darkMode ? '#1e3a8a' : '#e0f2fe',
+          border: `1px solid ${darkMode ? '#3b82f6' : '#81d4fa'}`,
           borderRadius: '6px',
           fontSize: '0.85rem',
-          color: darkMode ? '#fbbf24' : '#856404'
+          color: darkMode ? '#93c5fd' : '#0d47a1'
         }}>
-          <strong>⚠️ Aviso:</strong> Nenhuma categoria de notícias foi selecionada nas configurações. 
-          Vá às ⚙️ Configurações para escolher as categorias que lhe interessam e personalizar o seu feed de notícias.
+          <strong>💡 Dica:</strong> Está a ver todas as notícias disponíveis. 
+          Para personalizar o seu feed, vá às ⚙️ Configurações e escolha as categorias que mais lhe interessam.
         </div>
       )}
       
@@ -3744,7 +3721,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
 
   const categories = [
     { id: 'general', name: 'Geral', icon: '🌍' },
-    { id: 'technology', name: 'Tecnologia', icon: '💻' },
+    { id: 'technology', name: 'Tecnologia', icon: '🖥️' },
     { id: 'business', name: 'Negócios', icon: '💼' },
     { id: 'health', name: 'Saúde', icon: '🏥' },
     { id: 'science', name: 'Ciência', icon: '🔬' },
@@ -3938,24 +3915,25 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
             >
               ❌ Desmarcar Todas
             </button>
-            
-            <button
+              <button
               onClick={() => {
-                const defaultCategories = ['technology', 'business', 'science'];
-                setNewsCategories(defaultCategories);
-                saveSettings(notifications, emailUpdates, defaultCategories);
+                // Salvar as configurações atuais
+                saveSettings(notifications, emailUpdates, newsCategories);
+                // Mostrar mensagem de confirmação
+                alert('✅ Filtros salvos com sucesso!');
               }}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: darkMode ? '#0d6efd' : '#007bff',
+                backgroundColor: '#28a745',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '0.8rem'
+                fontSize: '0.8rem',
+                fontWeight: 'bold'
               }}
             >
-              🔄 Padrão (Tecnologia + Negócios)
+              � Salvar Filtros
             </button>
           </div>
         </div>

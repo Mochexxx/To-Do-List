@@ -1014,10 +1014,9 @@ function NewsSection({ darkMode = false }) {
   const [hasMore, setHasMore] = React.useState(true);
   const [apiStatus, setApiStatus] = React.useState('unknown'); // 'working', 'error', 'unknown'
   const [userCategoryPreferences, setUserCategoryPreferences] = React.useState(['technology', 'business', 'science']);
-  const newsContainerRef = React.useRef(null);
-  const categories = [
+  const newsContainerRef = React.useRef(null);  const categories = [
     { id: 'general', name: 'Geral', icon: '🌍' },
-    { id: 'technology', name: 'Tecnologia', icon: '�' },
+    { id: 'technology', name: 'Tecnologia', icon: '🖥️' },
     { id: 'business', name: 'Negócios', icon: '💼' },
     { id: 'health', name: 'Saúde', icon: '🏥' },
     { id: 'science', name: 'Ciência', icon: '🔬' },
@@ -1322,17 +1321,18 @@ function NewsSection({ darkMode = false }) {
     return mockArticles;
   };  return (
     <div>      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {/* Mostrar sempre todas as categorias, independentemente das preferências */}
-        {categories.map(category => {
-          const isPreferred = userCategoryPreferences.includes(category.id);
-          const isSelected = selectedCategory === category.id;
+        {/* Sempre mostrar "Geral" */}
+        {(() => {
+          const generalCategory = categories.find(cat => cat.id === 'general');
+          const isSelected = selectedCategory === generalCategory.id;
+          
           return (
             <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              key={generalCategory.id}
+              onClick={() => setSelectedCategory(generalCategory.id)}
               style={{
                 padding: '0.4rem 0.8rem',
-                border: `2px solid ${isSelected ? '#007bff' : (isPreferred ? '#28a745' : (darkMode ? '#555' : '#ddd'))}`,
+                border: `2px solid ${isSelected ? '#007bff' : (darkMode ? '#555' : '#ddd')}`,
                 borderRadius: '15px',
                 backgroundColor: isSelected ? '#007bff' : (darkMode ? '#3a3a3a' : 'white'),
                 color: isSelected ? 'white' : (darkMode ? '#fff' : '#333'),
@@ -1343,10 +1343,38 @@ function NewsSection({ darkMode = false }) {
                 display: 'inline-flex',
                 alignItems: 'center'
               }}
-              title={isPreferred ? `${category.name} - ⭐ Nas suas preferências` : `${category.name} - Clique para ver notícias desta categoria`}
+              title={`${generalCategory.name} - Todas as notícias favoritas`}
             >
-              {category.icon} {category.name}
-              {isPreferred && category.id !== 'general' && (
+              {generalCategory.icon} {generalCategory.name}
+            </button>
+          );
+        })()}
+        
+        {/* Mostrar apenas categorias selecionadas nas configurações */}
+        {categories
+          .filter(category => category.id !== 'general' && userCategoryPreferences.includes(category.id))
+          .map(category => {
+            const isSelected = selectedCategory === category.id;
+            return (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  border: `2px solid ${isSelected ? '#007bff' : '#28a745'}`,
+                  borderRadius: '15px',
+                  backgroundColor: isSelected ? '#007bff' : (darkMode ? '#3a3a3a' : 'white'),
+                  color: isSelected ? 'white' : (darkMode ? '#fff' : '#333'),
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  position: 'relative',
+                  opacity: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center'
+                }}
+                title={`${category.name} - ⭐ Nas suas preferências`}
+              >
+                {category.icon} {category.name}
                 <span style={{ 
                   marginLeft: '0.3rem', 
                   fontSize: '0.7rem',
@@ -1354,12 +1382,35 @@ function NewsSection({ darkMode = false }) {
                 }}>
                   ⭐
                 </span>
-              )}
-            </button>
-          );
-        })}
-      </div>{/* Aviso quando nenhuma categoria está selecionada */}
-      {selectedCategory === 'general' && userCategoryPreferences.length === 0 && (
+              </button>
+            );
+          })}
+      </div>      {/* Aviso quando nenhuma categoria está selecionada nas configurações */}
+      {userCategoryPreferences.length === 0 && (
+        <div style={{ 
+          marginBottom: '1rem',
+          padding: '1rem',
+          backgroundColor: darkMode ? '#2d1b69' : '#f0f8ff',
+          border: `2px solid ${darkMode ? '#4c51bf' : '#4299e1'}`,
+          borderRadius: '8px',
+          fontSize: '0.9rem',
+          color: darkMode ? '#a3bffa' : '#2b6cb0'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>⚙️</span>
+            <div>
+              <strong>Configure os seus filtros de notícias!</strong>
+              <p style={{ margin: '0.5rem 0 0 0', lineHeight: 1.4 }}>
+                Está a ver apenas a categoria "Geral" porque não configurou as suas preferências. 
+                Vá às <strong>⚙️ Configurações</strong> para escolher as categorias de notícias que mais lhe interessam.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Aviso quando nenhuma categoria está selecionada na visualização geral */}
+      {selectedCategory === 'general' && userCategoryPreferences.length > 0 && (
         <div style={{ 
           marginBottom: '1rem',
           padding: '0.75rem',
@@ -1369,8 +1420,8 @@ function NewsSection({ darkMode = false }) {
           fontSize: '0.85rem',
           color: darkMode ? '#93c5fd' : '#0d47a1'
         }}>
-          <strong>💡 Dica:</strong> Está a ver todas as notícias disponíveis. 
-          Para personalizar o seu feed, vá às ⚙️ Configurações e escolha as categorias que mais lhe interessam.
+          <strong>💡 Dica:</strong> Está a ver notícias das suas categorias favoritas. 
+          Clique numa categoria específica acima para ver apenas notícias dessa área.
         </div>
       )}
       
@@ -3718,9 +3769,7 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
   const [emailUpdates, setEmailUpdates] = React.useState(false);
   const [newsCategories, setNewsCategories] = React.useState(['technology', 'business', 'science']);
   const [message, setMessage] = React.useState('');
-
   const categories = [
-    { id: 'general', name: 'Geral', icon: '🌍' },
     { id: 'technology', name: 'Tecnologia', icon: '🖥️' },
     { id: 'business', name: 'Negócios', icon: '💼' },
     { id: 'health', name: 'Saúde', icon: '🏥' },
@@ -3785,6 +3834,67 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
   };  return (
     <div style={{ padding: '1rem', maxWidth: '600px' }}>
       <h3 style={{ marginBottom: '1.5rem', color: darkMode ? '#fff' : '#333' }}>⚙️ Configurações</h3>
+      
+      {/* Resumo dos filtros ativos */}
+      <div style={{ 
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        backgroundColor: darkMode ? '#2a3f2a' : '#f0f8f0',
+        border: `2px solid ${darkMode ? '#4ade80' : '#86efac'}`,
+        borderRadius: '8px',
+        fontSize: '0.9rem'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem',
+          marginBottom: '0.75rem',
+          color: darkMode ? '#86efac' : '#15803d',
+          fontWeight: 'bold'
+        }}>
+          <span>📊</span>
+          <span>Resumo dos Filtros de Notícias</span>
+        </div>
+        
+        {newsCategories.length > 0 ? (
+          <div>
+            <p style={{ 
+              margin: '0 0 0.75rem 0',
+              color: darkMode ? '#d1fae5' : '#166534'
+            }}>
+              <strong>{newsCategories.length}</strong> categoria{newsCategories.length !== 1 ? 's' : ''} ativa{newsCategories.length !== 1 ? 's' : ''}:
+            </p>
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '0.5rem' 
+            }}>
+              {categories
+                .filter(cat => newsCategories.includes(cat.id))
+                .map(cat => (
+                  <span key={cat.id} style={{
+                    padding: '0.25rem 0.5rem',
+                    backgroundColor: darkMode ? '#16a34a' : '#22c55e',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold'
+                  }}>
+                    {cat.icon} {cat.name}
+                  </span>
+                ))}
+            </div>
+          </div>
+        ) : (
+          <p style={{ 
+            margin: 0,
+            color: darkMode ? '#fca5a5' : '#dc2626',
+            fontStyle: 'italic'
+          }}>
+            ⚠️ Nenhuma categoria selecionada. Os filtros de notícias não estão ativos.
+          </p>
+        )}
+      </div>
       
       {/* Mensagem de feedback */}
       {message && (
@@ -3868,8 +3978,13 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
             fontSize: '0.85rem',
             color: darkMode ? '#ccc' : '#666'
           }}>
-            💡 <strong>Dica:</strong> As categorias selecionadas influenciarão as notícias mostradas nas páginas "Início" e "Notícias". 
-            Deixe desmarcadas as categorias que não lhe interessam para ver apenas conteúdo relevante.
+            💡 <strong>Como funcionam os filtros:</strong> 
+            <ul style={{ margin: '0.5rem 0 0 0', paddingLeft: '1.2rem' }}>
+              <li>A categoria <strong>"🌍 Geral"</strong> aparece sempre nos filtros</li>
+              <li>Na página <strong>"Início"</strong>: mostra notícias das categorias selecionadas</li>
+              <li>Na página <strong>"Notícias"</strong>: apenas as categorias selecionadas aparecem como filtros</li>
+              <li>Se não selecionar nenhuma categoria, verá apenas "Geral"</li>
+            </ul>
           </div>
           
           {/* Botões de ação */}
@@ -3878,10 +3993,9 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
             display: 'flex', 
             gap: '0.5rem',
             flexWrap: 'wrap'
-          }}>
-            <button
+          }}>            <button
               onClick={() => {
-                const allCategories = categories.filter(c => c.id !== 'general').map(c => c.id);
+                const allCategories = categories.map(c => c.id);
                 setNewsCategories(allCategories);
                 saveSettings(notifications, emailUpdates, allCategories);
               }}
@@ -3947,7 +4061,8 @@ function Dashboard() {
   const [user, setUser] = React.useState(null);
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
   const [previousView, setPreviousView] = React.useState('news'); // Guardar página anterior
-  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);const menuItems = [
+  const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const [userNewsCategories, setUserNewsCategories] = React.useState(['technology', 'business', 'science']);const menuItems = [
     { id: 'news', name: 'Início', icon: '🏠' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
     { id: 'agenda', name: 'Agenda', icon: '📅' },
@@ -3955,6 +4070,7 @@ function Dashboard() {
   ];React.useEffect(() => {
     loadTasks();
     loadUserData();
+    loadNewsSettings();
     
     // Load dark mode preference
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -3967,15 +4083,35 @@ function Dashboard() {
       setUser(updatedUser);
     };
     
+    // Escutar mudanças nas configurações de notícias
+    const handleNewsSettingsChange = (event) => {
+      setUserNewsCategories(event.detail.newsCategories || []);
+    };
+    
+    window.addEventListener('newsSettingsChanged', handleNewsSettingsChange);
+    
     // Cleanup
     return () => {
       delete window.updateUserData;
+      window.removeEventListener('newsSettingsChanged', handleNewsSettingsChange);
     };
   }, []);
-
   const loadUserData = () => {
     const userData = authService.getUser();
     setUser(userData);
+  };
+
+  const loadNewsSettings = () => {
+    const savedSettings = localStorage.getItem('newsSettings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setUserNewsCategories(settings.newsCategories || ['technology', 'business', 'science']);
+      } catch (error) {
+        console.error('Erro ao carregar configurações de notícias:', error);
+        setUserNewsCategories(['technology', 'business', 'science']);
+      }
+    }
   };
 
   const toggleDarkMode = () => {
@@ -4273,8 +4409,7 @@ function Dashboard() {
                   </div>
                 </div>              )}
             </div>
-          )}
-            {/* Botão de Configurações */}
+          )}            {/* Botão de Configurações */}
           <button 
             onClick={() => setCurrentView('settings')}
             style={{ 
@@ -4285,9 +4420,10 @@ function Dashboard() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              marginRight: '0.5rem'
+              marginRight: '0.5rem',
+              position: 'relative'
             }}
-            title="Configurações"
+            title={`Configurações ${userNewsCategories.length > 0 ? `(${userNewsCategories.length} categorias de notícias ativas)` : '(Configure suas preferências de notícias)'}`}
             onMouseEnter={(e) => {
               if (currentView !== 'settings') {
                 e.target.style.backgroundColor = darkMode ? '#3a3a3a' : '#e8e8e8';
@@ -4300,6 +4436,27 @@ function Dashboard() {
             }}
           >
             ⚙️
+            {/* Indicador de categorias ativas */}
+            {userNewsCategories.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                borderRadius: '50%',
+                width: '16px',
+                height: '16px',
+                fontSize: '0.6rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                border: `2px solid ${darkMode ? '#333' : '#f0f0f0'}`
+              }}>
+                {userNewsCategories.length}
+              </span>
+            )}
           </button>
           
             <button

@@ -2,22 +2,62 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>📝 To-Do List - Gestão de Tarefas e Notícias</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>📝 To-Do List - Gestão de Tarefas e Notícias</title>        <meta name="viewport" content="width=device-width, initial-scale=0.8, maximum-scale=1.2, user-scalable=yes" />
         <!-- React and ReactDOM CDN -->
         <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
         <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
         <!-- Babel for JSX support -->
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>        <style>
-            * { box-sizing: border-box; }
+            * { 
+                box-sizing: border-box; 
+                margin: 0;
+                padding: 0;
+            }
+            
+            html {
+                font-size: 14px; /* Reduzir tamanho base da fonte */
+            }
+            
             body { 
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
-                margin: 0; 
-                padding: 0;
                 background-color: #f5f5f5;
+                line-height: 1.4;
+                font-size: 0.9rem;
             }
+            
             #root { 
                 min-height: 100vh;
+                max-width: 100%;
+                overflow-x: auto;
+            }
+            
+            /* Responsive breakpoints */
+            @media (max-width: 1200px) {
+                html { font-size: 13px; }
+            }
+            
+            @media (max-width: 768px) {
+                html { font-size: 12px; }
+            }
+            
+            /* Scroll customization */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            
+            ::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+            
+            ::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 4px;
+            }
+            
+            ::-webkit-scrollbar-thumb:hover {
+                background: #555;
             }
             
             @keyframes spin {
@@ -1338,52 +1378,81 @@ function NewsSection({ darkMode = false }) {
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p>Carregando notícias...</p>
         </div>
-      ) : (        <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
-          {news.length > 0 ? (
-            news.map((article, index) => (
+      ) : (        <div style={{ maxHeight: '157vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
+          {news.length > 0 ? (            news.map((article, index) => (
               <div key={article.id || index} style={{ 
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`, 
-                borderRadius: '8px', 
-                padding: '1rem',
-                marginBottom: '1rem',
+                borderRadius: '6px', 
+                padding: '0.8rem',
+                marginBottom: '0.6rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.5rem',
+                gap: '0.4rem',
                 backgroundColor: darkMode ? '#3a3a3a' : 'white',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                cursor: 'pointer'
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = darkMode ? '0 4px 12px rgba(255,255,255,0.1)' : '0 4px 12px rgba(0,0,0,0.1)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = darkMode ? '0 2px 8px rgba(255,255,255,0.1)' : '0 2px 8px rgba(0,0,0,0.1)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
-              onClick={() => article.url !== '#' && window.open(article.url, '_blank')}
-              >
-                {article.urlToImage && (
-                  <img 
-                    src={article.urlToImage} 
-                    alt={article.title}
-                    style={{ 
-                      width: '100%', 
-                      height: '150px', 
-                      objectFit: 'cover', 
-                      borderRadius: '4px'
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
+              >                {article.urlToImage && (
+                  <div style={{
+                    width: '100%',
+                    height: '140px',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    backgroundColor: darkMode ? '#444' : '#f0f0f0'
+                  }}
+                  onClick={() => article.url !== '#' && window.open(article.url, '_blank')}
+                  >                    <img 
+                      src={article.urlToImage} 
+                      alt={article.title}
+                      style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        objectFit: 'cover',
+                        objectPosition: 'center',
+                        transition: 'transform 0.3s ease, filter 0.3s ease',
+                        display: 'block'
+                      }}
+                      onError={(e) => {
+                        e.target.parentElement.style.display = 'none';
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.filter = 'brightness(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.filter = 'brightness(1)';
+                      }}
+                      loading="lazy"
+                    />
+                    {/* Overlay gradient para melhor legibilidade se houver texto sobreposto */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '30%',
+                      background: 'linear-gradient(transparent, rgba(0,0,0,0.3))',
+                      pointerEvents: 'none'
+                    }}></div>
+                  </div>
                 )}
                 <div>
                   <h4 style={{ 
-                    margin: '0 0 0.5rem 0', 
-                    fontSize: '0.95rem', 
+                    margin: '0 0 0.3rem 0', 
+                    fontSize: '0.9rem', 
                     lineHeight: '1.3',
-                    color: darkMode ? '#fff' : '#333'
+                    color: darkMode ? '#fff' : '#333',
+                    fontWeight: '600'
                   }}>
                     {article.title}
                   </h4>
@@ -1392,11 +1461,11 @@ function NewsSection({ darkMode = false }) {
                     <p style={{ 
                       margin: '0 0 0.5rem 0', 
                       color: darkMode ? '#ccc' : '#666', 
-                      fontSize: '0.85rem', 
-                      lineHeight: '1.4' 
+                      fontSize: '0.75rem', 
+                      lineHeight: '1.4'
                     }}>
-                      {article.description.length > 150 ? 
-                        `${article.description.substring(0, 150)}...` : 
+                      {article.description.length > 180 ? 
+                        `${article.description.substring(0, 180)}...` : 
                         article.description
                       }
                     </p>
@@ -1406,41 +1475,77 @@ function NewsSection({ darkMode = false }) {
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
-                    fontSize: '0.75rem', 
-                    color: darkMode ? '#aaa' : '#999' 
+                    marginBottom: '0.5rem'
                   }}>
-                    <span>
-                      📰 {article.source?.name || 'Fonte não identificada'}
-                    </span>
-                    <span>
-                      🕒 {new Date(article.publishedAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
+                    <div style={{
+                      fontSize: '0.65rem', 
+                      color: darkMode ? '#aaa' : '#999',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.1rem'
+                    }}>
+                      <span>
+                        📰 {article.source?.name || 'Fonte não identificada'}
+                      </span>
+                      <span>
+                        🕒 {new Date(article.publishedAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    
+                    {/* Botão para ver notícia completa */}
+                    {article.url !== '#' && (
+                      <button
+                        onClick={() => window.open(article.url, '_blank')}
+                        style={{
+                          padding: '0.3rem 0.6rem',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.7rem',
+                          fontWeight: '500',
+                          transition: 'background-color 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                        onMouseEnter={e => {
+                          e.target.style.backgroundColor = '#0056b3';
+                        }}
+                        onMouseLeave={e => {
+                          e.target.style.backgroundColor = '#007bff';
+                        }}
+                      >
+                        📖 Ler
+                      </button>
+                    )}
                   </div>
                   
                   {/* Categoria tag */}
                   {article.category && (
                     <div style={{
-                      marginTop: '0.5rem',
                       display: 'inline-block',
-                      padding: '0.2rem 0.5rem',
+                      padding: '0.2rem 0.4rem',
                       backgroundColor: darkMode ? '#555' : '#f8f9fa',
                       color: darkMode ? '#fff' : '#6c757d',
-                      borderRadius: '12px',
-                      fontSize: '0.7rem',
-                      textTransform: 'capitalize'
+                      borderRadius: '10px',
+                      fontSize: '0.6rem',
+                      textTransform: 'capitalize',
+                      fontWeight: '500'
                     }}>
                       {categories.find(cat => cat.id === article.category)?.icon || '📰'} {article.category}
                     </div>
                   )}
                 </div>
               </div>
-            ))          ) : (
+            ))) : (
             <div style={{ textAlign: 'center', padding: '2rem', color: darkMode ? '#ccc' : '#666' }}>
               <p>📭 Nenhuma notícia encontrada para esta categoria.</p>
               {apiStatus === 'error' && (
@@ -2765,17 +2870,13 @@ function AgendaView({ darkMode }) {
         
         checkEvents();
       }
-    }, [day, isEmpty, events, currentDate]);
-
-    if (isEmpty) {
-      return <div style={{ height: '40px' }}></div>;
-    }
-
-    return (
+    }, [day, isEmpty, events, currentDate]);    if (isEmpty) {
+      return <div style={{ height: '32px' }}></div>;
+    }return (
       <div
         onClick={() => selectDate(day)}
         style={{
-          height: '40px',
+          height: '32px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -2799,17 +2900,17 @@ function AgendaView({ darkMode }) {
           }
         }}
       >
-        <span style={{ fontSize: '0.9rem', fontWeight: isToday(day) ? 'bold' : 'normal' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: isToday(day) ? 'bold' : 'normal' }}>
           {day}
         </span>
         {dayHasEvents && (
           <div style={{
-            width: '6px',
-            height: '6px',
+            width: '4px',
+            height: '4px',
             backgroundColor: isSelected(day) || isToday(day) ? 'white' : '#007bff',
             borderRadius: '50%',
             position: 'absolute',
-            bottom: '3px'
+            bottom: '2px'
           }}></div>
         )}
       </div>
@@ -2856,41 +2957,40 @@ function AgendaView({ darkMode }) {
       'high': '#dc3545'
     };
     return colors[priority] || '#6c757d';
-  };
-
-  return (
+  };  return (
     <div style={{ 
-      padding: '1rem', 
-      display: 'grid', 
-      gridTemplateColumns: '1fr 400px', 
-      gap: '2rem',
-      height: 'calc(100vh - 200px)'
-    }}>
-      {/* Calendário */}
+      padding: '0.75rem', 
+      display: window.innerWidth > 768 ? 'grid' : 'block',
+      gridTemplateColumns: window.innerWidth > 1024 ? '1fr 350px' : '1fr',
+      gap: '1rem',
+      height: 'calc(100vh - 160px)',
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>{/* Calendário */}
       <div style={{
         backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
-        borderRadius: '12px',
-        padding: '1.5rem',
+        borderRadius: '8px',
+        padding: '1rem',
         border: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        {/* Header do Calendário */}
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>        {/* Header do Calendário */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: '1.5rem' 
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          marginBottom: '1rem' 
+        }}>          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button
               onClick={() => navigateYear(-1)}
               style={{
-                padding: '0.5rem',
+                padding: '0.4rem',
                 backgroundColor: 'transparent',
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
                 borderRadius: '4px',
                 cursor: 'pointer',
-                color: darkMode ? '#fff' : '#333'
+                color: darkMode ? '#fff' : '#333',
+                fontSize: '0.8rem'
               }}
             >
               ⏪
@@ -2898,12 +2998,13 @@ function AgendaView({ darkMode }) {
             <button
               onClick={() => navigateMonth(-1)}
               style={{
-                padding: '0.5rem',
+                padding: '0.4rem',
                 backgroundColor: 'transparent',
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
                 borderRadius: '4px',
                 cursor: 'pointer',
-                color: darkMode ? '#fff' : '#333'
+                color: darkMode ? '#fff' : '#333',
+                fontSize: '0.8rem'
               }}
             >
               ◀
@@ -2912,8 +3013,9 @@ function AgendaView({ darkMode }) {
             <h3 style={{ 
               margin: 0, 
               color: darkMode ? '#fff' : '#333',
-              minWidth: '200px',
-              textAlign: 'center'
+              minWidth: '180px',
+              textAlign: 'center',
+              fontSize: '1.1rem'
             }}>
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h3>
@@ -2921,12 +3023,13 @@ function AgendaView({ darkMode }) {
             <button
               onClick={() => navigateMonth(1)}
               style={{
-                padding: '0.5rem',
+                padding: '0.4rem',
                 backgroundColor: 'transparent',
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
                 borderRadius: '4px',
                 cursor: 'pointer',
-                color: darkMode ? '#fff' : '#333'
+                color: darkMode ? '#fff' : '#333',
+                fontSize: '0.8rem'
               }}
             >
               ▶
@@ -2934,42 +3037,41 @@ function AgendaView({ darkMode }) {
             <button
               onClick={() => navigateYear(1)}
               style={{
-                padding: '0.5rem',
+                padding: '0.4rem',
                 backgroundColor: 'transparent',
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
                 borderRadius: '4px',
                 cursor: 'pointer',
-                color: darkMode ? '#fff' : '#333'
+                color: darkMode ? '#fff' : '#333',
+                fontSize: '0.8rem'
               }}
             >
               ⏩
             </button>
-          </div>
-          
+          </div>          
           <button
             onClick={() => {
               setCurrentDate(new Date());
               setSelectedDate(new Date());
             }}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.4rem 0.8rem',
               backgroundColor: '#007bff',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontSize: '0.8rem'
             }}
           >
             Hoje
           </button>
-        </div>
-
-        {/* Dias da Semana */}
+        </div>        {/* Dias da Semana */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(7, 1fr)', 
-          gap: '4px', 
-          marginBottom: '0.5rem' 
+          gap: '2px', 
+          marginBottom: '0.4rem' 
         }}>
           {weekDays.map(day => (
             <div 
@@ -2978,8 +3080,8 @@ function AgendaView({ darkMode }) {
                 textAlign: 'center', 
                 fontWeight: 'bold', 
                 color: darkMode ? '#ccc' : '#666',
-                padding: '0.5rem',
-                fontSize: '0.9rem'
+                padding: '0.3rem',
+                fontSize: '0.7rem'
               }}
             >
               {day}
@@ -2991,59 +3093,60 @@ function AgendaView({ darkMode }) {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(7, 1fr)', 
-          gap: '4px' 
+          gap: '2px' 
         }}>
           {renderCalendar()}
         </div>
 
         {/* Legenda */}
         <div style={{ 
-          marginTop: '1rem', 
+          marginTop: '0.75rem', 
           display: 'flex', 
           justifyContent: 'center', 
-          gap: '2rem',
-          fontSize: '0.8rem',
+          gap: '1rem',
+          fontSize: '0.7rem',
           color: darkMode ? '#ccc' : '#666'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: '12px', height: '12px', backgroundColor: '#28a745', borderRadius: '50%' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ width: '8px', height: '8px', backgroundColor: '#28a745', borderRadius: '50%' }}></div>
             <span>Hoje</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: '12px', height: '12px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ width: '8px', height: '8px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
             <span>Selecionado</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: '6px', height: '6px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <div style={{ width: '4px', height: '4px', backgroundColor: '#007bff', borderRadius: '50%' }}></div>
             <span>Com eventos</span>
           </div>
         </div>
-      </div>
-
-      {/* Dashboard de Eventos */}
+      </div>      {/* Dashboard de Eventos */}
       <div style={{
         backgroundColor: darkMode ? '#2a2a2a' : '#ffffff',
-        borderRadius: '12px',
-        padding: '1.5rem',
+        borderRadius: '8px',
+        padding: '1rem',
         border: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         display: 'flex',
-        flexDirection: 'column'
-      }}>        {/* Header do Dashboard */}
+        flexDirection: 'column',
+        overflow: 'hidden',
+        marginTop: window.innerWidth <= 1024 ? '1rem' : '0',
+        height: window.innerWidth <= 1024 ? 'auto' : 'calc(100vh - 200px)'
+      }}>{/* Header do Dashboard */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: '1.5rem',
+          marginBottom: '1rem',
           borderBottom: `1px solid ${darkMode ? '#444' : '#e0e0e0'}`,
-          paddingBottom: '1rem'
+          paddingBottom: '0.75rem'
         }}>
-          <h3 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>
+          <h3 style={{ margin: 0, color: darkMode ? '#fff' : '#333', fontSize: '1rem' }}>
             📅 Eventos - {selectedDate.toLocaleDateString('pt-PT')}
             {loading && (
               <span style={{ 
                 marginLeft: '0.5rem', 
-                fontSize: '0.8rem', 
+                fontSize: '0.7rem', 
                 color: darkMode ? '#ccc' : '#666' 
               }}>
                 🔄 Carregando...
@@ -3054,13 +3157,13 @@ function AgendaView({ darkMode }) {
             onClick={openNewEventForm}
             disabled={loading}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.4rem 0.8rem',
               backgroundColor: loading ? '#6c757d' : '#28a745',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.9rem',
+              fontSize: '0.8rem',
               opacity: loading ? 0.6 : 1
             }}
           >
@@ -3913,16 +4016,16 @@ function Dashboard() {
         padding: '1rem 2rem',
         maxWidth: '1400px',
         margin: '130px auto 0 auto'
-      }}>
-        {currentView === 'news' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', height: 'calc(100vh - 160px)' }}>
+      }}>        {currentView === 'news' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', height: 'calc(100vh - 90px)' }}>
             {/* Feed de notícias - coluna principal */}
             <div style={{ 
               backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
               borderRadius: '12px',
               border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
               overflow: 'hidden',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              height: 'calc(100vh - 100px)'
             }}>
               <div style={{ padding: '1.5rem', borderBottom: `1px solid ${darkMode ? '#333' : '#e0e0e0'}` }}>
                 <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>📰 Feed de Notícias</h2>

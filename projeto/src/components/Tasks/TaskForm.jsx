@@ -61,11 +61,24 @@ function TaskForm({ task, onSave, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    console.log('=== INICIANDO CRIAÇÃO DE TAREFA ===');
+    console.log('Estado do formulário:', {
+      title,
+      description,
+      priority,
+      status,
+      isRecurring,
+      estimatedDuration,
+      tags
+    });
+    
+    if (!validateForm()) {
+      console.log('❌ Formulário inválido');
+      return;
+    }
 
     setLoading(true);
-    try {
-      const taskData = {
+    try {      const taskData = {
         title: title.trim(),
         description: description.trim(),
         startDate: startDate || null,
@@ -74,19 +87,36 @@ function TaskForm({ task, onSave, onCancel }) {
         status,
         isRecurring,
         recurringType: isRecurring ? recurringType : undefined,
-        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
-        estimatedDuration: estimatedDuration ? parseInt(estimatedDuration) : null
+        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
       };
+
+      // Só adicionar estimatedDuration se tiver valor válido
+      if (estimatedDuration && estimatedDuration.trim() !== '') {
+        taskData.estimatedDuration = estimatedDuration;
+      }
+
+      console.log('📝 Dados da tarefa a enviar:', taskData);
+      console.log('🔐 Token atual:', localStorage.getItem('token') ? 'Token existe' : 'Sem token');
+      console.log('👤 Usuário atual:', authService.getUser());
 
       let savedTask;
       if (isEditing) {
+        console.log('✏️ Atualizando tarefa:', task._id);
         savedTask = await tasksService.updateTask(task._id, taskData);
       } else {
+        console.log('➕ Criando nova tarefa...');
         savedTask = await tasksService.createTask(taskData);
       }
 
+      console.log('✅ Tarefa salva com sucesso:', savedTask);
       onSave(savedTask);
     } catch (error) {
+      console.error('❌ ERRO ao criar/atualizar tarefa:', error);
+      console.error('Detalhes do erro:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       setErrors({ submit: error.message });
     } finally {
       setLoading(false);
@@ -187,17 +217,18 @@ function TaskForm({ task, onSave, onCancel }) {
           onChange={(e) => setTags(e.target.value)}
           placeholder="Ex: trabalho, pessoal, urgente"
         />
-      </div>
-
-      <div>
-        <label>Duração Estimada (minutos):</label>
-        <input
-          type="number"
-          value={estimatedDuration}
-          onChange={(e) => setEstimatedDuration(e.target.value)}
-          min={1}
-          max={10080}
-        />
+      </div>      <div>
+        <label>Duração Estimada:</label>
+        <select value={estimatedDuration} onChange={(e) => setEstimatedDuration(e.target.value)}>
+          <option value="">Não especificado</option>
+          <option value="15min">15 minutos</option>
+          <option value="30min">30 minutos</option>
+          <option value="1h">1 hora</option>
+          <option value="2h">2 horas</option>
+          <option value="4h">4 horas</option>
+          <option value="8h">8 horas</option>
+          <option value="1d+">1 dia ou mais</option>
+        </select>
         {errors.estimatedDuration && <p style={{ color: 'red' }}>{errors.estimatedDuration}</p>}
       </div>
 

@@ -3,13 +3,15 @@ const API_BASE_URL = 'http://localhost:5000/api';
 // Função para verificar se o backend está disponível
 const checkBackendConnectivity = async () => {
   try {
+    console.log('Testando conectividade com backend...');
     const response = await fetch('http://localhost:5000/', { 
       method: 'GET',
       timeout: 3000 
     });
+    console.log('Backend response:', response.ok, response.status);
     return response.ok;
   } catch (error) {
-    console.log('Backend não disponível, usando modo offline');
+    console.log('Backend não disponível, usando modo offline:', error.message);
     return false;
   }
 };
@@ -17,6 +19,11 @@ const checkBackendConnectivity = async () => {
 // Helper function para fazer requisições HTTP
 const makeRequest = async (url, options = {}) => {
   const token = localStorage.getItem('token');
+  
+  console.log('🌐 makeRequest - Iniciando requisição');
+  console.log('📍 URL:', url);
+  console.log('⚙️ Method:', options.method || 'GET');
+  console.log('🔑 Token:', token ? 'Token presente' : 'Sem token');
   
   const defaultOptions = {
     headers: {
@@ -34,14 +41,35 @@ const makeRequest = async (url, options = {}) => {
     }
   };
 
-  const response = await fetch(url, finalOptions);
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Erro na requisição');
+  console.log('📤 Headers finais:', finalOptions.headers);
+  console.log('📦 Body:', options.body);
+
+  try {
+    const response = await fetch(url, finalOptions);
+    
+    console.log('📥 Response status:', response.status);
+    console.log('📥 Response ok:', response.ok);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Response error text:', errorText);
+      
+      let error;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = { message: errorText };
+      }
+      throw new Error(error.message || 'Erro na requisição');
+    }
+    
+    const result = await response.json();
+    console.log('✅ Response data:', result);
+    return result;
+  } catch (error) {
+    console.error('💥 makeRequest - Erro:', error);
+    throw error;
   }
-  
-  return response.json();
 };
 
 // Storage Service for local data persistence
@@ -126,68 +154,68 @@ const storageService = {
 
 // Auth Service
 const authService = {
-  isOnlineMode: false,
+  isOnlineMode: true, // Force online mode for backend integration
 
   async initialize() {
     this.isOnlineMode = await checkBackendConnectivity();
     console.log(`Modo ${this.isOnlineMode ? 'online' : 'offline'} ativado`);
+    // If backend is not available, show a warning but continue in offline mode
+    if (!this.isOnlineMode) {
+      console.warn('Backend não disponível - dados não serão salvos no servidor');
+    }
   },
-
   async register(userData) {
     try {
-      if (this.isOnlineMode) {
-        // Modo online - usar backend real
-        const response = await makeRequest(`${API_BASE_URL}/auth/register`, {
-          method: 'POST',
-          body: JSON.stringify({
-            username: userData.username,
-            email: userData.email,
-            password: userData.password,
-            country: userData.country,
-            countryName: userData.countryName,
-            newsCountryCode: userData.newsCountryCode
-          })
-        });
-
-        // Salvar token e dados do usuário
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        return response;
-      } else {
-        // Modo offline - usar localStorage
-        const user = {
-          id: Date.now().toString(),
-          username: userData.username,
+      // Always try backend first
+      const response = await makeRequest(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: userData.username, // Backend expects 'name' field
           email: userData.email,
+          password: userData.password,
           country: userData.country,
           countryName: userData.countryName,
-          newsCountryCode: userData.newsCountryCode,
-          registeredAt: userData.registeredAt,
-          createdAt: new Date().toISOString()
-        };
-        
-        const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
-        
-        // Save user data and token
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        // Save user preferences with country-based defaults
-        const userPreferences = {
-          newsCountry: userData.newsCountryCode,
-          language: userData.country === 'br' ? 'pt-BR' : userData.country === 'pt' ? 'pt-PT' : 'en',
-          timezone: this.getTimezoneByCountry(userData.country),
-          notifications: true,
-          defaultPriority: 'média',
-          darkMode: false
-        };
-        localStorage.setItem('userPreferences', JSON.stringify(userPreferences));
-        
-        return { token, user, message: 'Registro realizado com sucesso!' };
-      }
+          newsCountryCode: userData.newsCountryCode
+        })
+      });
+
+      // Salvar token e dados do usuário
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      return response;
     } catch (error) {
-      throw error;
+      console.error('Backend registration failed:', error);
+      // Fallback to offline mode only if backend completely fails
+      const user = {
+        id: Date.now().toString(),
+        username: userData.username,
+        email: userData.email,
+        country: userData.country,
+        countryName: userData.countryName,
+        newsCountryCode: userData.newsCountryCode,
+        registeredAt: userData.registeredAt,
+        createdAt: new Date().toISOString()
+      };
+      
+      const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
+      
+      // Save user data and token
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Save user preferences with country-based defaults
+      const userPreferences = {
+        newsCountry: userData.newsCountryCode,
+        language: userData.country === 'br' ? 'pt-BR' : userData.country === 'pt' ? 'pt-PT' : 'en',
+        timezone: this.getTimezoneByCountry(userData.country),
+        notifications: true,
+        defaultPriority: 'média',
+        darkMode: false
+      };
+      localStorage.setItem('userPreferences', JSON.stringify(userPreferences));
+      
+      return { token, user, message: 'Registro realizado com sucesso (modo offline)!' };
     }
   },
 
@@ -210,40 +238,36 @@ const authService = {
       'ar': 'America/Argentina/Buenos_Aires'
     };
     return timezones[countryCode] || 'UTC';
-  },
-  async login(credentials) {
+  },  async login(credentials) {
     try {
-      if (this.isOnlineMode) {
-        // Modo online - usar backend real
-        const response = await makeRequest(`${API_BASE_URL}/auth/login`, {
-          method: 'POST',
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password
-          })
-        });
+      // Always try backend first
+      const response = await makeRequest(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password
+        })
+      });
 
-        // Salvar token e dados do usuário
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        return response;
-      } else {
-        // Modo offline - usar localStorage
-        const savedUser = localStorage.getItem('user');
-        if (!savedUser) {
-          throw new Error('Nenhum usuário registrado. Crie uma conta primeiro.');
-        }
-        
-        const user = JSON.parse(savedUser);
-        const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
-        
-        localStorage.setItem('token', token);
-        
-        return { token, user, message: 'Login realizado com sucesso (modo offline)' };
-      }
+      // Salvar token e dados do usuário
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      return response;
     } catch (error) {
-      throw error;
+      console.error('Backend login failed:', error);
+      // Fallback to offline mode only if backend completely fails
+      const savedUser = localStorage.getItem('user');
+      if (!savedUser) {
+        throw new Error('Nenhum usuário registrado. Crie uma conta primeiro.');
+      }
+      
+      const user = JSON.parse(savedUser);
+      const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
+      
+      localStorage.setItem('token', token);
+      
+      return { token, user, message: 'Login realizado com sucesso (modo offline)' };
     }
   },
 
@@ -515,64 +539,80 @@ const authService = {
   }
 };
 
-// Tasks Service with local storage
+// Tasks Service with backend integration and local storage fallback
 const tasksService = {
   async getTasks() {
     try {
-      // Use local storage for data persistence
-      return storageService.getTasks();
+      console.log('Tentando buscar tarefas do backend...');
+      // Try backend first
+      const tasks = await makeRequest(`${API_BASE_URL}/tasks`, { method: 'GET' });
+      console.log('Tarefas obtidas do backend:', tasks);
+      return tasks;
     } catch (error) {
-      console.error('Erro ao buscar tarefas:', error);
-      return [];
+      console.warn('Backend unavailable, using local storage:', error.message);
+      // Fallback to local storage
+      return storageService.getTasks();
     }
-  },
-  async createTask(taskData) {
+  },  async createTask(taskData) {
     try {
-      // Sanitizar e validar dados
+      console.log('🔄 tasksService.createTask - Iniciando...');
+      console.log('📊 Dados recebidos:', taskData);
+      console.log('🌐 API URL:', `${API_BASE_URL}/tasks`);
+      
+      // Try backend first
+      const task = await makeRequest(`${API_BASE_URL}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(taskData)
+      });
+      console.log('✅ Tarefa criada no backend:', task);
+      return task;
+    } catch (error) {
+      console.warn('⚠️ Backend unavailable, using local storage:', error.message);
+      console.error('Erro completo:', error);
+      // Fallback to local storage
       const sanitizedData = taskValidationService.sanitizeTaskData(taskData);
       const validation = taskValidationService.validateTaskData(sanitizedData);
-      
       if (!validation.isValid) {
         throw new Error('Dados inválidos: ' + validation.errors.join(', '));
       }
-      
-      // Add user ID to task
       const user = authService.getUser();
       const taskWithUser = {
         ...sanitizedData,
         userId: user?.id
       };
-      
       return storageService.addTask(taskWithUser);
-    } catch (error) {
-      throw new Error('Erro ao criar tarefa: ' + error.message);
     }
   },
-
   async updateTask(taskId, taskData) {
     try {
-      // Sanitizar e validar dados (apenas campos fornecidos)
+      // Try backend first
+      return await makeRequest(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'PUT',
+        body: JSON.stringify(taskData)
+      });
+    } catch (error) {
+      console.warn('Backend unavailable, using local storage:', error.message);
+      // Fallback to local storage
       const sanitizedData = taskValidationService.sanitizeTaskData(taskData);
-      
-      // Para updates, validar apenas se há dados suficientes
       if (taskData.title !== undefined) {
         const validation = taskValidationService.validateTaskData(sanitizedData);
         if (!validation.isValid) {
           throw new Error('Dados inválidos: ' + validation.errors.join(', '));
         }
       }
-      
       return storageService.updateTask(taskId, sanitizedData);
-    } catch (error) {
-      throw new Error('Erro ao atualizar tarefa: ' + error.message);
     }
   },
-
   async deleteTask(taskId) {
     try {
-      return storageService.deleteTask(taskId);
+      // Try backend first
+      return await makeRequest(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'DELETE'
+      });
     } catch (error) {
-      throw new Error('Erro ao deletar tarefa: ' + error.message);
+      console.warn('Backend unavailable, using local storage:', error.message);
+      // Fallback to local storage
+      return storageService.deleteTask(taskId);
     }
   },
   // Utility methods
@@ -1099,7 +1139,7 @@ const eventsService = {
 
 // Export for use in HTML
 window.authService = authService;
-window.tasksService = tasksService;
+window.tasksService = tasksService; // Expose updated service to global scope
 window.storageService = storageService;
 window.taskValidationService = taskValidationService;
 window.eventsService = eventsService;

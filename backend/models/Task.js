@@ -46,11 +46,10 @@ const taskSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 50
-  }],
-  estimatedDuration: {
+  }],  estimatedDuration: {
     type: String,
     enum: ['15min', '30min', '1h', '2h', '4h', '8h', '1d+'],
-    default: ''
+    required: false
   },
   // Campos de compatibilidade
   completed: {

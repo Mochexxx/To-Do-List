@@ -1,4 +1,7 @@
-const NEWS_API_KEY = '100879ca703f4ce4b4aee80bcca895f3';
+//Colocar Aqui a Api do newsApi
+
+const NEWS_API_KEY = '+++++++++YOUR_API_KEY+++++++++';
+
 const NEWS_API_URL = 'https://newsapi.org/v2';
 
 // Cache local para notícias

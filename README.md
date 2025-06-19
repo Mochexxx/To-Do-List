@@ -1,4 +1,4 @@
-# 📝 To-Do List
+# 📝 Lista de Tarefas
 
 **Desenvolvido por:** Pedro Sousa
 
@@ -7,31 +7,31 @@ Aplicação web para gestão de tarefas e notícias, criada com React.
 
 ## Funcionalidades
 - ✅ Criar, editar e eliminar tarefas
--  Notícias de várias categorias
+- 📰 Notícias de várias categorias com imagens em formato quadrado
 - 📅 Agenda de eventos
-- 👤 Sistema de login
+- 👤 Sistema de autenticação
 - ⚙️ Configurações personalizáveis
 
-## Como Executar
+## Como Utilizar
 
 ### Forma Simples
-1. Abra o arquivo `projeto/public/index.html` no navegador
+1. Abra o ficheiro `projeto/public/index.html` no navegador
 
 ### Com Servidor Local (Recomendado)
 ```bash
 cd projeto/public
 python -m http.server 8000
 ```
-Depois abra: `http://localhost:8000`
+Depois aceda a: `http://localhost:8000`
 
-### Com Base de Dados (Completo)
+### Com Base de Dados (Versão Completa)
 1. Instale e inicie o MongoDB:
    ```powershell
    # Instalar MongoDB (caso não esteja instalado)
    # Via chocolatey:
    choco install mongodb
    
-   # Ou baixe diretamente do site oficial:
+   # Ou descarregue diretamente do site oficial:
    # https://www.mongodb.com/try/download/community
 
    # Iniciar MongoDB
@@ -42,13 +42,11 @@ Depois abra: `http://localhost:8000`
    "C:\Program Files\MongoDB\Server\6.0\bin\mongod.exe" --dbpath="C:\data\db"
    ```
 
-2. Colocar a API do NewsAPI no arquivo `backend/config.js`:
+2. Colocar a chave API do NewsAPI no ficheiro `projeto/src/services/news.js`:
    ```javascript
    // Colocar Aqui a Api do newsApi
    const NEWS_API_KEY = '+++++++++YOUR_API_KEY+++++++++';
    ```
-   const NEWS_API_URL = 'https://newsapi.org/v2';
-   
 
 3. Inicie o backend:
    ```bash

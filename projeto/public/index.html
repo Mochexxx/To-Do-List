@@ -1430,15 +1430,15 @@ function NewsSection({ darkMode = false }) {
           <p>Carregando notícias...</p>
         </div>
       ) : (        <div style={{ maxHeight: '157vh', overflowY: 'auto', paddingRight: '0.5rem' }} ref={newsContainerRef}>
-          {news.length > 0 ? (            news.map((article, index) => (
-              <div key={article.id || index} style={{ 
+          {news.length > 0 ? (            news.map((article, index) => (              <div key={article.id || index} style={{ 
                 border: `1px solid ${darkMode ? '#555' : '#ddd'}`, 
                 borderRadius: '6px', 
                 padding: '0.8rem',
                 marginBottom: '0.6rem',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.4rem',
+                alignItems: 'center',
+                gap: '0.6rem',
                 backgroundColor: darkMode ? '#3a3a3a' : 'white',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease'
               }}
@@ -1452,13 +1452,14 @@ function NewsSection({ darkMode = false }) {
               }}
               >                {article.urlToImage && (
                   <div style={{
-                    width: '100%',
+                    width: '140px',
                     height: '140px',
                     borderRadius: '6px',
                     overflow: 'hidden',
                     position: 'relative',
                     cursor: 'pointer',
-                    backgroundColor: darkMode ? '#444' : '#f0f0f0'
+                    backgroundColor: darkMode ? '#444' : '#f0f0f0',
+                    margin: '0 auto'
                   }}
                   onClick={() => article.url !== '#' && window.open(article.url, '_blank')}
                   >                    <img 
@@ -1494,10 +1495,12 @@ function NewsSection({ darkMode = false }) {
                       height: '30%',
                       background: 'linear-gradient(transparent, rgba(0,0,0,0.3))',
                       pointerEvents: 'none'
-                    }}></div>
-                  </div>
+                    }}></div>                </div>
                 )}
-                <div>
+                <div style={{ 
+                  width: '100%',
+                  textAlign: 'center'
+                }}>
                   <h4 style={{ 
                     margin: '0 0 0.3rem 0', 
                     fontSize: '0.9rem', 
@@ -1507,13 +1510,14 @@ function NewsSection({ darkMode = false }) {
                   }}>
                     {article.title}
                   </h4>
-                  
-                  {article.description && (
+                    {article.description && (
                     <p style={{ 
                       margin: '0 0 0.5rem 0', 
                       color: darkMode ? '#ccc' : '#666', 
                       fontSize: '0.75rem', 
-                      lineHeight: '1.4'
+                      lineHeight: '1.4',
+                      maxWidth: '90%',
+                      margin: '0 auto'
                     }}>
                       {article.description.length > 180 ? 
                         `${article.description.substring(0, 180)}...` : 

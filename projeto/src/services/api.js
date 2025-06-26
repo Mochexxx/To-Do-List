@@ -23,7 +23,10 @@ const makeRequest = async (url, options = {}) => {
   console.log('🌐 makeRequest - Iniciando requisição');
   console.log('📍 URL:', url);
   console.log('⚙️ Method:', options.method || 'GET');
-  console.log('🔑 Token:', token ? 'Token presente' : 'Sem token');
+  console.log('🔑 Token presente:', !!token);
+  if (token) {
+    console.log('🔑 Token (primeiros 20 chars):', token.substring(0, 20) + '...');
+  }
   
   const defaultOptions = {
     headers: {
@@ -41,7 +44,10 @@ const makeRequest = async (url, options = {}) => {
     }
   };
 
-  console.log('📤 Headers finais:', finalOptions.headers);
+  console.log('📤 Headers finais:', {
+    'Content-Type': finalOptions.headers['Content-Type'],
+    'Authorization': finalOptions.headers['Authorization'] ? 'Bearer [TOKEN]' : 'Não presente'
+  });
   console.log('📦 Body:', options.body);
 
   try {
@@ -60,6 +66,13 @@ const makeRequest = async (url, options = {}) => {
       } catch {
         error = { message: errorText };
       }
+      
+      // Se for erro 401, pode ser token inválido
+      if (response.status === 401) {
+        console.error('🚫 Erro de autenticação - token pode estar inválido ou expirado');
+        console.error('🔑 Token atual:', token);
+      }
+      
       throw new Error(error.message || 'Erro na requisição');
     }
     
@@ -155,13 +168,21 @@ const storageService = {
 // Auth Service
 const authService = {
   isOnlineMode: true, // Force online mode for backend integration
-
   async initialize() {
+    console.log('🚀 authService.initialize - Iniciando verificação do backend');
     this.isOnlineMode = await checkBackendConnectivity();
-    console.log(`Modo ${this.isOnlineMode ? 'online' : 'offline'} ativado`);
+    console.log(`🌐 Modo ${this.isOnlineMode ? 'online' : 'offline'} ativado`);
+    
     // If backend is not available, show a warning but continue in offline mode
     if (!this.isOnlineMode) {
-      console.warn('Backend não disponível - dados não serão salvos no servidor');
+      console.warn('⚠️ Backend não disponível - dados não serão salvos no servidor');
+      console.warn('💡 Para ativar o modo online:');
+      console.warn('   1. Abra um terminal');
+      console.warn('   2. cd backend');
+      console.warn('   3. npm install');
+      console.warn('   4. npm start');
+    } else {
+      console.log('✅ Backend conectado com sucesso!');
     }
   },
   async register(userData) {
@@ -240,6 +261,8 @@ const authService = {
     return timezones[countryCode] || 'UTC';
   },  async login(credentials) {
     try {
+      console.log('🔐 Tentando login:', credentials.email);
+      
       // Always try backend first
       const response = await makeRequest(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -249,13 +272,16 @@ const authService = {
         })
       });
 
+      console.log('✅ Login backend bem-sucedido');
       // Salvar token e dados do usuário
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       
       return response;
     } catch (error) {
-      console.error('Backend login failed:', error);
+      console.error('❌ Backend login falhou:', error);
+      console.log('🔄 Tentando modo offline...');
+      
       // Fallback to offline mode only if backend completely fails
       const savedUser = localStorage.getItem('user');
       if (!savedUser) {
@@ -263,21 +289,71 @@ const authService = {
       }
       
       const user = JSON.parse(savedUser);
-      const token = btoa(JSON.stringify({ userId: user.id, username: user.username }));
+      
+      // Verificar credenciais básicas em modo offline
+      if (user.email !== credentials.email) {
+        throw new Error('Email incorreto');
+      }
+      
+      // Gerar token offline mais robusto
+      const tokenPayload = {
+        userId: user.id || user._id,
+        username: user.username || user.name,
+        email: user.email,
+        iat: Math.floor(Date.now() / 1000), // issued at
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 dias
+        mode: 'offline'
+      };
+      
+      const token = btoa(JSON.stringify(tokenPayload));
+      console.log('🎫 Token offline gerado:', token.substring(0, 20) + '...');
       
       localStorage.setItem('token', token);
       
-      return { token, user, message: 'Login realizado com sucesso (modo offline)' };
+      return { 
+        token, 
+        user, 
+        message: 'Login realizado com sucesso (modo offline)',
+        isOfflineMode: true
+      };
     }
   },
-
   logout() {
+    console.log('👋 Fazendo logout...');
     localStorage.removeItem('token');
     // Keep user data for future logins
   },
 
+  clearInvalidToken() {
+    console.log('🧹 Limpando token inválido...');
+    localStorage.removeItem('token');
+  },
   getToken() {
     return localStorage.getItem('token');
+  },
+
+  isTokenValid() {
+    const token = this.getToken();
+    if (!token) return false;
+    
+    try {
+      // Tentar decodificar token offline
+      const decoded = JSON.parse(atob(token));
+      
+      // Verificar se é token offline e se não expirou
+      if (decoded.mode === 'offline' && decoded.exp) {
+        const now = Math.floor(Date.now() / 1000);
+        if (now > decoded.exp) {
+          console.warn('🕐 Token offline expirado');
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      // Se não conseguir decodificar, assumir que é token do backend (válido)
+      return true;
+    }
   },
 
   getUser() {
@@ -286,7 +362,7 @@ const authService = {
   },
 
   isAuthenticated() {
-    return !!this.getToken();
+    return !!this.getToken() && this.isTokenValid();
   },
 
   // CRUD Operations for User Profile
@@ -863,20 +939,33 @@ const taskValidationService = {
 };
 
 // Events Service for agenda management
-const eventsService = {
-  async getEvents() {
+const eventsService = {  async getEvents() {
     try {
+      console.log('📋 eventsService.getEvents - Iniciando busca');
+      console.log('🌐 Modo online:', authService.isOnlineMode);
+      
       if (authService.isOnlineMode) {
         // Modo online - usar backend real
+        console.log('📡 Buscando eventos do backend');
         const response = await makeRequest(`${API_BASE_URL}/events`);
+        console.log('✅ Eventos recebidos do backend:', response);
         return response.events || [];
       } else {
         // Modo offline - usar localStorage
+        console.log('💾 Buscando eventos do localStorage');
+        const events = localStorage.getItem('agenda_events');
+        const parsedEvents = events ? JSON.parse(events) : [];
+        console.log('✅ Eventos do localStorage:', parsedEvents);
+        return parsedEvents;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao buscar eventos:', error);
+      // Fallback para localStorage se o backend falhar
+      if (authService.isOnlineMode) {
+        console.log('🔄 Fallback para localStorage devido ao erro');
         const events = localStorage.getItem('agenda_events');
         return events ? JSON.parse(events) : [];
       }
-    } catch (error) {
-      console.error('Erro ao buscar eventos:', error);
       return [];
     }
   },
@@ -893,19 +982,64 @@ const eventsService = {
     } catch (error) {
       console.error('Erro ao salvar eventos:', error);
     }
-  },
-
-  async addEvent(eventData) {
+  },  async addEvent(eventData) {
     try {
-      if (authService.isOnlineMode) {
+      console.log('🎯 eventsService.addEvent - Dados recebidos:', eventData);
+      console.log('🌐 Modo online:', authService.isOnlineMode);
+      console.log('🔐 Token válido:', authService.isTokenValid());
+      
+      if (authService.isOnlineMode && authService.isTokenValid()) {
         // Modo online - usar backend real
-        const response = await makeRequest(`${API_BASE_URL}/events`, {
-          method: 'POST',
-          body: JSON.stringify(eventData)
-        });
-        return response.event;
+        console.log('📡 Enviando para backend:', `${API_BASE_URL}/events`);
+        try {
+          const response = await makeRequest(`${API_BASE_URL}/events`, {
+            method: 'POST',
+            body: JSON.stringify(eventData)
+          });
+          console.log('✅ Resposta do backend:', response);
+          return response.event;
+        } catch (error) {
+          console.error('❌ Erro do backend, fallback para modo offline:', error);
+          
+          // Se erro 401, token pode estar inválido - forçar modo offline
+          if (error.message.includes('Token inválido') || error.message.includes('401')) {
+            console.warn('🔄 Token inválido, salvando localmente');
+          }
+          
+          // Fallback para localStorage
+          throw error; // Re-throw para ser capturado pelo fallback abaixo
+        }
       } else {
-        // Modo offline - usar localStorage
+        console.log('💾 Salvando em modo offline (backend indisponível ou token inválido)');
+      }
+      
+      // Modo offline - usar localStorage (ou fallback)
+      const events = await this.getEvents();
+      const newEvent = {
+        id: Date.now(),
+        title: eventData.title || '',
+        description: eventData.description || '',
+        date: eventData.date || '',
+        time: eventData.time || '',
+        type: eventData.type || 'event',
+        priority: eventData.priority || 'medium',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: authService.getUser()?.id || null
+      };
+      
+      events.push(newEvent);
+      await this.saveEvents(events);
+      console.log('✅ Evento salvo em modo offline:', newEvent);
+      return newEvent;
+      
+    } catch (error) {
+      console.error('❌ Erro em eventsService.addEvent:', error);
+      
+      // Se for erro de autenticação, tentar salvar offline
+      if (error.message.includes('Token inválido') || error.message.includes('401')) {
+        console.log('🔄 Tentando salvar offline devido a erro de autenticação...');
+        
         const events = await this.getEvents();
         const newEvent = {
           id: Date.now(),
@@ -922,10 +1056,11 @@ const eventsService = {
         
         events.push(newEvent);
         await this.saveEvents(events);
+        console.log('✅ Evento salvo offline após erro de autenticação');
         return newEvent;
       }
-    } catch (error) {
-      console.error('Erro ao adicionar evento:', error);
+      
+      console.error('❌ Stack trace:', error.stack);
       throw error;
     }
   },

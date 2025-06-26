@@ -2989,7 +2989,6 @@ function AgendaView({ darkMode }) {
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
     return events.filter(event => event.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
   };
-
   const handleEventSubmit = async (e) => {
     e.preventDefault();
     
@@ -3000,13 +2999,19 @@ function AgendaView({ darkMode }) {
 
     try {
       setLoading(true);
+      
+      console.log('📝 Dados do evento para salvar:', eventForm);
+      console.log('🔧 Modo de edição:', !!editingEvent);
 
       if (editingEvent) {
         // Editar evento existente
+        console.log('✏️ Editando evento com ID:', editingEvent.id);
         await window.eventsService.updateEvent(editingEvent.id, eventForm);
       } else {
         // Criar novo evento
-        await window.eventsService.addEvent(eventForm);
+        console.log('➕ Criando novo evento');
+        const result = await window.eventsService.addEvent(eventForm);
+        console.log('✅ Evento criado:', result);
       }
 
       // Recarregar eventos após a operação
@@ -3016,9 +3021,88 @@ function AgendaView({ darkMode }) {
       setEventForm({ title: '', description: '', date: '', time: '', type: 'event', priority: 'medium' });
       setEditingEvent(null);
       setShowEventForm(false);
-    } catch (error) {
-      console.error('Erro ao salvar evento:', error);
-      alert('Erro ao salvar evento. Tente novamente.');
+      
+      // Mostrar mensagem de sucesso
+      alert(editingEvent ? '✅ Evento atualizado com sucesso!' : '✅ Evento criado com sucesso!');    } catch (error) {
+      console.error('❌ Erro detalhado ao salvar evento:', error);
+      console.error('❌ Stack trace:', error.stack);
+      
+      // Verificar se é problema de conectividade
+      if (error.message && error.message.includes('Failed to fetch')) {
+        alert('❌ Erro de conexão com o servidor. Verifique se o backend está rodando.\n\n' +
+              'Para iniciar o backend:\n' +
+              '1. Abra um terminal\n' +
+              '2. cd backend\n' +
+              '3. npm start');
+      } else if (error.message && (error.message.includes('401') || error.message.includes('Token inválido'))) {
+        const userChoice = confirm('❌ Erro de autenticação - Token inválido ou expirado.\n\n' +
+                                  'Opções:\n' +
+                                  '✅ OK: Salvar evento localmente (modo offline)\n' +
+                                  '❌ Cancelar: Fazer login novamente');
+        
+        if (userChoice) {
+          // Salvar localmente
+          try {
+            console.log('💾 Tentando salvar evento localmente...');
+            // Forçar modo offline temporariamente
+            const originalMode = window.authService.isOnlineMode;
+            window.authService.isOnlineMode = false;
+            
+            const result = await window.eventsService.addEvent(eventForm);
+            console.log('✅ Evento salvo localmente:', result);
+            
+            // Restaurar modo original
+            window.authService.isOnlineMode = originalMode;
+            
+            // Recarregar eventos
+            await loadEvents();
+            
+            // Reset form
+            setEventForm({ title: '', description: '', date: '', time: '', type: 'event', priority: 'medium' });
+            setEditingEvent(null);
+            setShowEventForm(false);
+            
+            alert('✅ Evento salvo localmente com sucesso!\n\n' +
+                  '💡 Dica: Para sincronizar com o servidor, faça login novamente quando o backend estiver disponível.');
+            return;
+          } catch (localError) {
+            console.error('❌ Erro ao salvar localmente:', localError);
+            alert('❌ Erro ao salvar evento localmente: ' + localError.message);
+          }
+        } else {
+          // Redirecionar para login
+          window.authService.clearInvalidToken();
+          if (confirm('Deseja fazer login novamente agora?')) {
+            window.location.reload();
+          }
+        }
+      } else if (error.message && error.message.includes('400')) {
+        alert('❌ Dados inválidos. Verifique se todos os campos estão preenchidos corretamente.');
+      } else {
+        // Oferecer opção de salvar localmente para outros erros
+        const userChoice = confirm(`❌ Erro ao salvar evento: ${error.message || 'Erro desconhecido'}\n\n` +
+                                  'Deseja tentar salvar o evento localmente?');
+        
+        if (userChoice) {
+          try {
+            console.log('💾 Salvando evento localmente como fallback...');
+            const originalMode = window.authService.isOnlineMode;
+            window.authService.isOnlineMode = false;
+            
+            await window.eventsService.addEvent(eventForm);
+            window.authService.isOnlineMode = originalMode;
+            
+            await loadEvents();
+            setEventForm({ title: '', description: '', date: '', time: '', type: 'event', priority: 'medium' });
+            setEditingEvent(null);
+            setShowEventForm(false);
+            
+            alert('✅ Evento salvo localmente como backup!');
+          } catch (localError) {
+            alert('❌ Não foi possível salvar o evento: ' + localError.message);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -4071,9 +4155,12 @@ function Dashboard() {
     { id: 'agenda', name: 'Agenda', icon: '📅' },
     { id: 'noticias', name: 'Notícias', icon: '📰' }
   ];React.useEffect(() => {
-    loadTasks();
-    loadUserData();
-    loadNewsSettings();
+    // Inicializar serviços primeiro
+    authService.initialize().then(() => {
+      loadTasks();
+      loadUserData();
+      loadNewsSettings();
+    });
     
     // Load dark mode preference
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -4344,10 +4431,22 @@ function Dashboard() {
                   <span style={{ fontSize: '1rem' }}>
                     {countries.find(c => c.code === user.country)?.flag}
                   </span>
-                )}
-                <span style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666' }}>
+                )}                <span style={{ fontSize: '0.8rem', color: darkMode ? '#ccc' : '#666' }}>
                   {showProfileMenu ? '▲' : '▼'}
                 </span>
+                
+                {/* Backend Status Indicator */}
+                <div style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: window.authService?.isOnlineMode ? '#28a745' : '#ffc107',
+                  border: '2px solid ' + (darkMode ? '#1a1a1a' : '#ffffff'),
+                  title: window.authService?.isOnlineMode ? 'Backend conectado' : 'Modo offline'
+                }}></div>
               </div>
               
               {/* Profile Dropdown Menu */}
@@ -4537,14 +4636,71 @@ function Dashboard() {
           >
             {darkMode ? '☀️' : '🌙'}
           </button>
-        </div>      </header>
+        </div>      </header>      {/* Backend Status Banner */}
+      {!window.authService?.isOnlineMode && (
+        <div style={{
+          position: 'fixed',
+          top: '70px',
+          left: 0,
+          right: 0,
+          backgroundColor: '#ffc107',
+          color: '#212529',
+          padding: '0.5rem 2rem',
+          textAlign: 'center',
+          fontSize: '0.9rem',
+          fontWeight: '500',
+          zIndex: 999,
+          borderBottom: '1px solid #e0a800',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <span>⚠️ Modo Offline - Backend não conectado. Os dados serão salvos localmente.</span>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '0.25rem 0.5rem',
+              backgroundColor: '#212529',
+              color: '#ffc107',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Tentar Reconectar
+          </button>
+          {!window.authService?.isTokenValid() && (
+            <button 
+              onClick={() => {
+                window.authService?.clearInvalidToken();
+                if (confirm('Token inválido detectado. Deseja fazer login novamente?')) {
+                  window.location.reload();
+                }
+              }} 
+              style={{
+                padding: '0.25rem 0.5rem',
+                backgroundColor: '#dc3545',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              � Renovar Login
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Conteúdo principal */}
       <main style={{ 
-        marginTop: '70px', // Espaço apenas para o header
+        marginTop: window.authService?.isOnlineMode ? '70px' : '110px', // Espaço para header + banner se offline
         padding: '1rem 2rem',
         maxWidth: '1400px',
-        margin: '70px auto 0 auto'
+        margin: (window.authService?.isOnlineMode ? '70px' : '110px') + ' auto 0 auto'
       }}>{currentView === 'news' && (
           <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '1rem', height: 'calc(100vh - 90px)' }}>
             {/* Feed de notícias - coluna esquerda (75%) */}

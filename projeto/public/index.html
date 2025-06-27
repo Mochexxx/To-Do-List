@@ -4182,7 +4182,7 @@ function NotificationSettings({ darkMode }) {
 }
 
 // Componente do Centro de Notificações
-function NotificationCenter({ darkMode }) {
+function NotificationCenter({ darkMode, navigateToView }) {
   const [history, setHistory] = React.useState([]);
   const [filter, setFilter] = React.useState('all'); // all, tasks, events, news
   const [isLoading, setIsLoading] = React.useState(true);
@@ -4315,16 +4315,16 @@ function NotificationCenter({ darkMode }) {
       if (window.navigateToTask && notification.taskId) {
         window.navigateToTask(notification.taskId);
       } else {
-        setCurrentView('tasks');
+        navigateToView('tasks');
       }
     } else if (notification.type === 'event' || notification.tag?.includes('event')) {
       if (window.navigateToAgenda && notification.eventDate) {
         window.navigateToAgenda(notification.eventDate);
       } else {
-        setCurrentView('agenda');
+        navigateToView('agenda');
       }
     } else if (notification.type === 'news' || notification.tag?.includes('news')) {
-      setCurrentView('news');
+      navigateToView('news');
     }
   };
 
@@ -4653,7 +4653,7 @@ function NotificationCenter({ darkMode }) {
             flexWrap: 'wrap'
           }}>
             <button
-              onClick={() => setCurrentView('tasks')}
+              onClick={() => navigateToView('tasks')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#28a745',
@@ -4669,7 +4669,7 @@ function NotificationCenter({ darkMode }) {
               📋 Ver Tarefas
             </button>
             <button
-              onClick={() => setCurrentView('agenda')}
+              onClick={() => navigateToView('agenda')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#007bff',
@@ -4685,7 +4685,7 @@ function NotificationCenter({ darkMode }) {
               📅 Ver Agenda
             </button>
             <button
-              onClick={() => setCurrentView('settings')}
+              onClick={() => navigateToView('settings')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: '#6c757d',
@@ -4981,7 +4981,15 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
 function Dashboard() {
   const [tasks, setTasks] = React.useState([]);
   const [user, setUser] = React.useState(null);
-  const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
+  const [currentView, setCurrentView] = React.useState(() => {
+    // Load saved view from localStorage, default to 'news'
+    try {
+      return localStorage.getItem('currentView') || 'news';
+    } catch (error) {
+      console.error('Error loading saved view:', error);
+      return 'news';
+    }
+  });
   const [previousView, setPreviousView] = React.useState('news'); // Guardar página anterior
   const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [userNewsCategories, setUserNewsCategories] = React.useState(['technology', 'business', 'science']);
@@ -5034,7 +5042,7 @@ function Dashboard() {
 
     // Funções globais para navegação de notificações
     window.navigateToTask = (taskId) => {
-      setCurrentView('tasks');
+      navigateToView('tasks');
       // Destacar a tarefa específica após um pequeno delay
       setTimeout(() => {
         const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -5051,7 +5059,7 @@ function Dashboard() {
     };
 
     window.navigateToAgenda = (date) => {
-      setCurrentView('agenda');
+      navigateToView('agenda');
       // Navegar para a data específica após um pequeno delay
       setTimeout(() => {
         if (window.calendarRef && window.calendarRef.goToDate) {
@@ -5111,12 +5119,19 @@ function Dashboard() {
     document.body.style.backgroundColor = newDarkMode ? '#121212' : '#ffffff';
     document.body.style.color = newDarkMode ? '#ffffff' : '#000000';  };
 
-  // Função personalizada para navegação que guarda a página anterior
+  // Função personalizada para navegação que guarda a página anterior e salva no localStorage
   const navigateToView = (newView) => {
     if (newView === 'create') {
       setPreviousView(currentView); // Guardar página atual antes de ir para create
     }
     setCurrentView(newView);
+    
+    // Save current view to localStorage for F5 persistence
+    try {
+      localStorage.setItem('currentView', newView);
+    } catch (error) {
+      console.error('Error saving current view:', error);
+    }
   };
 
   const loadTasks = async () => {
@@ -5131,7 +5146,7 @@ function Dashboard() {
   const handleTaskCreated = (newTask) => {
     setTasks(prev => [newTask, ...prev]);
     setStats(tasksService.getStats());
-    setCurrentView(previousView); // Volta para a página anterior
+    navigateToView(previousView); // Volta para a página anterior
   };
 
   const handleTaskUpdated = (updatedTask) => {
@@ -5169,7 +5184,7 @@ function Dashboard() {
     return (
       <CreateTaskPage 
         onTaskCreated={handleTaskCreated}
-        onBack={() => setCurrentView('news')}
+        onBack={() => navigateToView('news')}
       />
     );
   }
@@ -5177,7 +5192,7 @@ function Dashboard() {
   if (currentView === 'profile') {
     return (
       <ProfilePage 
-        onBack={() => setCurrentView('news')}
+        onBack={() => navigateToView('news')}
         user={user}
         stats={stats}
       />
@@ -5205,7 +5220,7 @@ function Dashboard() {
         height: '70px'
       }}>        <div style={{ display: 'flex', alignItems: 'center' }}>
           <button
-            onClick={() => setCurrentView('news')}
+            onClick={() => navigateToView('news')}
             style={{
               width: 40,
               height: 40,
@@ -5237,7 +5252,7 @@ function Dashboard() {
           {menuItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id)}
+              onClick={() => navigateToView(item.id)}
               style={{
                 padding: '0.5rem 1rem',
                 border: 'none',
@@ -5403,7 +5418,7 @@ function Dashboard() {
                   
                   <div style={{ padding: '0.5rem 0' }}>                    <button
                       onClick={() => {
-                        setCurrentView('profile');
+                        navigateToView('profile');
                         setShowProfileMenu(false);
                       }}
                       style={{
@@ -5471,7 +5486,7 @@ function Dashboard() {
             </div>
           )}            {/* Botão de Notificações */}
           <button 
-            onClick={() => setCurrentView('notifications')}
+            onClick={() => navigateToView('notifications')}
             style={{ 
               position: 'relative',
               width: 40, height: 40, borderRadius: '50%', border: 'none',
@@ -5531,7 +5546,7 @@ function Dashboard() {
 
           {/* Botão de Configurações */}
           <button 
-            onClick={() => setCurrentView('settings')}
+            onClick={() => navigateToView('settings')}
             style={{ 
               width: 40, height: 40, borderRadius: '50%', border: 'none',
               background: currentView === 'settings' ? (darkMode ? '#444' : '#e0e0e0') : (darkMode ? '#333' : '#f0f0f0'), 
@@ -5779,7 +5794,7 @@ function Dashboard() {
             marginLeft: '-3rem',
             marginRight: '-2rem'
           }}>
-            <NotificationCenter darkMode={darkMode} />
+            <NotificationCenter darkMode={darkMode} navigateToView={navigateToView} />
           </div>
         )}        {currentView === 'settings' && (
           <div style={{ 
@@ -5810,7 +5825,7 @@ function Dashboard() {
             <h3>⚠️ Página não encontrada</h3>
             <p>A página solicitada não existe.</p>
             <button 
-              onClick={() => setCurrentView('news')}
+              onClick={() => navigateToView('news')}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#007bff',

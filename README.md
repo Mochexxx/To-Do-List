@@ -64,12 +64,100 @@ Depois aceda a: `http://localhost:8000`
 - MongoDB (base de dados)
 - Node.js (backend)
 
+## 📸 Capturas de Ecrã
+
+### Interface Principal
+![Página Inicial - Notícias](<Captura de ecrã 2025-06-27 143206.png>)
+*Vista geral da página inicial com notícias e navegação principal*
+
+### Sistema de Autenticação
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143427.png" alt="Login" width="100%"/>
+      <p align="center"><em>Ecrã de Login</em></p>
+    </td>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143218.png" alt="Registo" width="100%"/>
+      <p align="center"><em>Ecrã de Registo</em></p>
+    </td>
+  </tr>
+</table>
+
+### Gestão de Tarefas
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143226.png" alt="Lista de Tarefas" width="100%"/>
+      <p align="center"><em>Dashboard de Tarefas</em></p>
+    </td>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143235.png" alt="Criar Tarefa" width="100%"/>
+      <p align="center"><em>Formulário de Criação de Tarefa</em></p>
+    </td>
+  </tr>
+</table>
+
+### Agenda de Eventos
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143309.png" alt="Agenda" width="100%"/>
+      <p align="center"><em>Vista da Agenda</em></p>
+    </td>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143314.png" alt="Criar Evento" width="100%"/>
+      <p align="center"><em>Criação de Novo Evento</em></p>
+    </td>
+  </tr>
+</table>
+
+### Sistema de Notificações
+<table>
+  <tr>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143349.png" alt="Centro de Notificações" width="100%"/>
+      <p align="center"><em>Centro de Notificações</em></p>
+    </td>
+    <td width="50%">
+      <img src="Captura de ecrã 2025-06-27 143355.png" alt="Configurações de Notificações" width="100%"/>
+      <p align="center"><em>Configurações de Notificações</em></p>
+    </td>
+  </tr>
+</table>
+
+### Configurações e Perfil
+<table>
+  <tr>
+    <td width="33%">
+      <img src="Captura de ecrã 2025-06-27 143359.png" alt="Configurações" width="100%"/>
+      <p align="center"><em>Painel de Configurações</em></p>
+    </td>
+    <td width="33%">
+      <img src="Captura de ecrã 2025-06-27 143413.png" alt="Perfil do Utilizador" width="100%"/>
+      <p align="center"><em>Perfil do Utilizador</em></p>
+    </td>
+    <td width="33%">
+      <img src="Captura de ecrã 2025-06-27 143418.png" alt="Modo Escuro" width="100%"/>
+      <p align="center"><em>Interface em Modo Escuro</em></p>
+    </td>
+  </tr>
+</table>
+
+### Interface Responsiva
+![Interface Mobile](<Captura de ecrã 2025-06-27 143423.png>)
+*Interface adaptada para dispositivos móveis*
+
+---
+
+## 🚀 Características Destacadas
+
+- **🎨 Interface Moderna**: Design limpo e intuitivo
+- **🌓 Modo Escuro**: Alternância entre temas claro e escuro
+- **📱 Responsivo**: Adaptado para desktop e dispositivos móveis
+- **🔔 Notificações**: Sistema completo de lembretes e alertas
+- **⚡ Performance**: Carregamento rápido e otimizado
+- **🔐 Segurança**: Autenticação segura e proteção de dados
+
 ---
 **© 2025 Pedro Sousa**
-
-
-
-![alt text](<Captura de ecrã 2025-06-27 143206.png>)
-
-
-![alt text](<Captura de ecrã 2025-06-27 143427.png>) ![alt text](<Captura de ecrã 2025-06-27 143218.png>) ![alt text](<Captura de ecrã 2025-06-27 143226.png>) ![alt text](<Captura de ecrã 2025-06-27 143235.png>) ![alt text](<Captura de ecrã 2025-06-27 143309.png>) ![alt text](<Captura de ecrã 2025-06-27 143314.png>) ![alt text](<Captura de ecrã 2025-06-27 143349.png>) ![alt text](<Captura de ecrã 2025-06-27 143355.png>) ![alt text](<Captura de ecrã 2025-06-27 143359.png>) ![alt text](<Captura de ecrã 2025-06-27 143413.png>) ![alt text](<Captura de ecrã 2025-06-27 143418.png>) ![alt text](<Captura de ecrã 2025-06-27 143423.png>)

@@ -379,6 +379,11 @@ const notificationsService = {
       if (window.updateUnreadNotifications) {
         window.updateUnreadNotifications();
       }
+
+      // Disparar evento customizado para atualizar o centro de notificações
+      window.dispatchEvent(new CustomEvent('notificationAdded', {
+        detail: notification
+      }));
     } catch (error) {
       console.error('❌ Erro ao salvar log:', error);
     }

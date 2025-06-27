@@ -3972,7 +3972,11 @@ function NotificationSettings({ darkMode }) {
       {permission === 'granted' && (
         <>
           {/* Configurações Gerais */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ 
+            marginBottom: '1.5rem',
+            opacity: settings.enabled ? 1 : 0.6,
+            transition: 'opacity 0.3s'
+          }}>
             <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
               Configurações Gerais
             </h5>
@@ -3987,15 +3991,37 @@ function NotificationSettings({ darkMode }) {
                   })}
                   style={{ marginRight: '0.75rem' }}
                 />
-                <span style={{ color: darkMode ? '#fff' : '#333' }}>
-                  🔔 Ativar todas as notificações
+                <span style={{ 
+                  color: darkMode ? '#fff' : '#333',
+                  fontWeight: settings.enabled ? 'normal' : 'bold'
+                }}>
+                  {settings.enabled ? '🔔 Todas as notificações ativadas' : '🔕 Notificações desativadas'}
                 </span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              {!settings.enabled && (
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: darkMode ? '#3a3a3a' : '#fff3cd',
+                  border: `1px solid ${darkMode ? '#555' : '#ffeaa7'}`,
+                  borderRadius: '6px',
+                  fontSize: '0.9rem',
+                  color: darkMode ? '#ffc107' : '#856404'
+                }}>
+                  ⚠️ Todas as notificações estão desativadas. Ative para receber lembretes de tarefas e eventos.
+                </div>
+              )}
+
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: settings.enabled ? 'pointer' : 'not-allowed',
+                opacity: settings.enabled ? 1 : 0.5
+              }}>
                 <input 
                   type="checkbox" 
                   checked={settings.sound.enabled}
+                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingsChange({
                     ...settings,
                     sound: { ...settings.sound, enabled: e.target.checked }
@@ -4010,7 +4036,11 @@ function NotificationSettings({ darkMode }) {
           </div>
 
           {/* Configurações de Tarefas */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ 
+            marginBottom: '1.5rem',
+            opacity: settings.enabled ? 1 : 0.5,
+            pointerEvents: settings.enabled ? 'auto' : 'none'
+          }}>
             <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
               📋 Notificações de Tarefas
             </h5>
@@ -4019,6 +4049,7 @@ function NotificationSettings({ darkMode }) {
                 <input 
                   type="checkbox" 
                   checked={settings.tasks.enabled}
+                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingsChange({
                     ...settings,
                     tasks: { ...settings.tasks, enabled: e.target.checked }
@@ -4034,6 +4065,7 @@ function NotificationSettings({ darkMode }) {
                 <input 
                   type="checkbox" 
                   checked={settings.tasks.onlyUrgent}
+                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingsChange({
                     ...settings,
                     tasks: { ...settings.tasks, onlyUrgent: e.target.checked }
@@ -4048,7 +4080,11 @@ function NotificationSettings({ darkMode }) {
           </div>
 
           {/* Configurações de Eventos */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ 
+            marginBottom: '1.5rem',
+            opacity: settings.enabled ? 1 : 0.5,
+            pointerEvents: settings.enabled ? 'auto' : 'none'
+          }}>
             <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
               📅 Notificações de Eventos
             </h5>
@@ -4057,6 +4093,7 @@ function NotificationSettings({ darkMode }) {
                 <input 
                   type="checkbox" 
                   checked={settings.events.enabled}
+                  disabled={!settings.enabled}
                   onChange={(e) => handleSettingsChange({
                     ...settings,
                     events: { ...settings.events, enabled: e.target.checked }
@@ -4070,28 +4107,10 @@ function NotificationSettings({ darkMode }) {
             </div>
           </div>
 
-          {/* Teste e Histórico */}
+          {/* Limpar Histórico */}
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
-            gap: '1rem',
             marginBottom: '1.5rem'
           }}>
-            <button
-              onClick={handleTestNotification}
-              style={{
-                padding: '0.75rem',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              🧪 Testar Notificação
-            </button>
-
             <button
               onClick={() => {
                 window.notificationsService?.clearHistory();
@@ -4099,7 +4118,7 @@ function NotificationSettings({ darkMode }) {
                 alert('Histórico limpo!');
               }}
               style={{
-                padding: '0.75rem',
+                padding: '0.75rem 1.5rem',
                 backgroundColor: '#6c757d',
                 color: 'white',
                 border: 'none',
@@ -4167,6 +4186,7 @@ function NotificationCenter({ darkMode }) {
   const [history, setHistory] = React.useState([]);
   const [filter, setFilter] = React.useState('all'); // all, tasks, events, news
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [stats, setStats] = React.useState({
     total: 0,
     today: 0,
@@ -4180,10 +4200,31 @@ function NotificationCenter({ darkMode }) {
     if (window.updateUnreadNotifications) {
       window.updateUnreadNotifications();
     }
+
+    // Auto-refresh a cada 30 segundos para capturar novas notificações
+    const refreshInterval = setInterval(() => {
+      loadNotificationHistory();
+    }, 30000);
+
+    // Listener para atualizações manuais do histórico
+    const handleHistoryUpdate = () => {
+      loadNotificationHistory();
+    };
+
+    // Escutar eventos customizados de nova notificação
+    window.addEventListener('notificationAdded', handleHistoryUpdate);
+    
+    // Cleanup
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('notificationAdded', handleHistoryUpdate);
+    };
   }, []);
 
   const loadNotificationHistory = () => {
-    setIsLoading(true);
+    if (!isLoading) {
+      setIsRefreshing(true);
+    }
     try {
       const notificationHistory = window.notificationsService?.getNotificationHistory() || [];
       setHistory(notificationHistory);
@@ -4203,6 +4244,7 @@ function NotificationCenter({ darkMode }) {
       console.error('❌ Erro ao carregar histórico:', error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -4349,9 +4391,21 @@ function NotificationCenter({ darkMode }) {
           <h2 style={{
             margin: '0 0 0.5rem 0',
             fontSize: '1.8rem',
-            fontWeight: '600'
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
           }}>
             🔔 Centro de Notificações
+            {isRefreshing && (
+              <span style={{
+                fontSize: '1rem',
+                color: darkMode ? '#aaa' : '#666',
+                animation: 'spin 1s linear infinite'
+              }}>
+                🔄
+              </span>
+            )}
           </h2>
           <div style={{
             display: 'flex',
@@ -4387,22 +4441,28 @@ function NotificationCenter({ darkMode }) {
             </button>
           )}
           <button
-            onClick={() => window.notificationsService?.testNotification()}
+            onClick={loadNotificationHistory}
+            disabled={isRefreshing}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: '#6f42c1',
+              backgroundColor: isRefreshing ? '#6c757d' : '#17a2b8',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
-              cursor: 'pointer',
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
               fontSize: '0.9rem',
               fontWeight: '500',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              opacity: isRefreshing ? 0.6 : 1
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#5a2d91'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#6f42c1'}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) e.target.style.backgroundColor = '#138496'
+            }}
+            onMouseLeave={(e) => {
+              if (!isRefreshing) e.target.style.backgroundColor = '#17a2b8'
+            }}
           >
-            🧪 Testar
+            🔄 Atualizar
           </button>
           <button
             onClick={clearHistory}

@@ -71,9 +71,9 @@
         </style>
     </head>
     <body>        <div id="root"></div>
-        
-        <script src="../src/services/api.js"></script>
+          <script src="../src/services/api.js"></script>
         <script src="../src/services/news.js"></script>
+        <script src="../src/services/notifications.js"></script>
         <script type="text/babel">
 // Countries data with flags and news codes
 const countries = [
@@ -3846,6 +3846,803 @@ function AgendaView({ darkMode }) {
           </div>
         </div>
       )}
+    </div>  );
+}
+
+// Componente de Configurações de Notificações
+function NotificationSettings({ darkMode }) {
+  const [settings, setSettings] = React.useState(null);
+  const [permission, setPermission] = React.useState('default');
+  const [history, setHistory] = React.useState([]);
+
+  React.useEffect(() => {
+    loadNotificationSettings();
+    loadNotificationHistory();
+  }, []);
+
+  const loadNotificationSettings = () => {
+    const notificationSettings = window.notificationsService?.getSettings();
+    if (notificationSettings) {
+      setSettings(notificationSettings);
+    }
+    setPermission(window.notificationsService?.permission || 'default');
+  };
+
+  const loadNotificationHistory = () => {
+    const notificationHistory = window.notificationsService?.getNotificationHistory() || [];
+    setHistory(notificationHistory.slice(0, 10)); // Últimas 10
+  };
+
+  const handlePermissionRequest = async () => {
+    try {
+      const granted = await window.notificationsService?.requestPermission();
+      if (granted) {
+        setPermission('granted');
+        // Atualizar configurações após conceder permissão
+        loadNotificationSettings();
+      }
+    } catch (error) {
+      console.error('Erro ao solicitar permissão:', error);
+      alert('Erro ao solicitar permissão de notificação');
+    }
+  };
+
+  const handleSettingsChange = (newSettings) => {
+    setSettings(newSettings);
+    window.notificationsService?.saveSettings(newSettings);
+  };
+
+  const handleTestNotification = () => {
+    window.notificationsService?.testNotification();
+    // Recarregar histórico após teste
+    setTimeout(loadNotificationHistory, 1000);
+  };
+
+  if (!settings) {
+    return <div>Carregando configurações...</div>;
+  }
+
+  return (
+    <div style={{ 
+      padding: '1.5rem', 
+      backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
+      border: `1px solid ${darkMode ? '#444' : '#ddd'}`,
+      borderRadius: '12px'
+    }}>
+      {/* Status da Permissão */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '1rem'
+        }}>
+          <h5 style={{ margin: 0, color: darkMode ? '#fff' : '#333' }}>
+            Status das Notificações
+          </h5>
+          <div style={{
+            padding: '0.25rem 0.75rem',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            fontWeight: 'bold',
+            backgroundColor: permission === 'granted' ? '#d4edda' : 
+                           permission === 'denied' ? '#f8d7da' : '#fff3cd',
+            color: permission === 'granted' ? '#155724' : 
+                   permission === 'denied' ? '#721c24' : '#856404'
+          }}>
+            {permission === 'granted' ? '✅ Ativadas' : 
+             permission === 'denied' ? '❌ Bloqueadas' : '⚠️ Pendente'}
+          </div>
+        </div>
+
+        {permission !== 'granted' && (
+          <div style={{ 
+            padding: '1rem',
+            backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+            border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+            borderRadius: '8px',
+            marginBottom: '1rem'
+          }}>
+            <p style={{ margin: '0 0 1rem 0', color: darkMode ? '#ccc' : '#666' }}>
+              {permission === 'denied' 
+                ? '❌ Notificações foram bloqueadas. Para ativar, vá nas configurações do browser.'
+                : '🔔 Clique para ativar notificações e receber lembretes importantes.'
+              }
+            </p>
+            {permission !== 'denied' && (
+              <button
+                onClick={handlePermissionRequest}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                🔔 Ativar Notificações
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {permission === 'granted' && (
+        <>
+          {/* Configurações Gerais */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
+              Configurações Gerais
+            </h5>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={settings.enabled}
+                  onChange={(e) => handleSettingsChange({
+                    ...settings,
+                    enabled: e.target.checked
+                  })}
+                  style={{ marginRight: '0.75rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  🔔 Ativar todas as notificações
+                </span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={settings.sound.enabled}
+                  onChange={(e) => handleSettingsChange({
+                    ...settings,
+                    sound: { ...settings.sound, enabled: e.target.checked }
+                  })}
+                  style={{ marginRight: '0.75rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  🔊 Som de notificação
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Configurações de Tarefas */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
+              📋 Notificações de Tarefas
+            </h5>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={settings.tasks.enabled}
+                  onChange={(e) => handleSettingsChange({
+                    ...settings,
+                    tasks: { ...settings.tasks, enabled: e.target.checked }
+                  })}
+                  style={{ marginRight: '0.75rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  Notificar sobre prazos de tarefas
+                </span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={settings.tasks.onlyUrgent}
+                  onChange={(e) => handleSettingsChange({
+                    ...settings,
+                    tasks: { ...settings.tasks, onlyUrgent: e.target.checked }
+                  })}
+                  style={{ marginRight: '0.75rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  🔴 Apenas tarefas urgentes e altas
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Configurações de Eventos */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
+              📅 Notificações de Eventos
+            </h5>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={settings.events.enabled}
+                  onChange={(e) => handleSettingsChange({
+                    ...settings,
+                    events: { ...settings.events, enabled: e.target.checked }
+                  })}
+                  style={{ marginRight: '0.75rem' }}
+                />
+                <span style={{ color: darkMode ? '#fff' : '#333' }}>
+                  Notificar sobre eventos próximos
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Teste e Histórico */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            <button
+              onClick={handleTestNotification}
+              style={{
+                padding: '0.75rem',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              🧪 Testar Notificação
+            </button>
+
+            <button
+              onClick={() => {
+                window.notificationsService?.clearHistory();
+                setHistory([]);
+                alert('Histórico limpo!');
+              }}
+              style={{
+                padding: '0.75rem',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              🗑️ Limpar Histórico
+            </button>
+          </div>
+
+          {/* Histórico de Notificações */}
+          {history.length > 0 && (
+            <div>
+              <h5 style={{ margin: '0 0 1rem 0', color: darkMode ? '#fff' : '#333' }}>
+                📜 Últimas Notificações
+              </h5>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {history.map((notification, index) => (
+                  <div 
+                    key={notification.id || index}
+                    style={{
+                      padding: '0.75rem',
+                      backgroundColor: darkMode ? '#3a3a3a' : '#ffffff',
+                      border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
+                      borderRadius: '6px',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    <div style={{ 
+                      fontWeight: 'bold', 
+                      color: darkMode ? '#fff' : '#333',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {notification.title}
+                    </div>
+                    <div style={{ 
+                      color: darkMode ? '#ccc' : '#666',
+                      fontSize: '0.8rem'
+                    }}>
+                      {notification.body}
+                    </div>
+                    <div style={{ 
+                      color: darkMode ? '#999' : '#888',
+                      fontSize: '0.7rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      {new Date(notification.timestamp).toLocaleString('pt-PT')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Componente do Centro de Notificações
+function NotificationCenter({ darkMode }) {
+  const [history, setHistory] = React.useState([]);
+  const [filter, setFilter] = React.useState('all'); // all, tasks, events, news
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [stats, setStats] = React.useState({
+    total: 0,
+    today: 0,
+    unread: 0
+  });
+
+  React.useEffect(() => {
+    loadNotificationHistory();
+    
+    // Atualizar contador quando o componente for montado
+    if (window.updateUnreadNotifications) {
+      window.updateUnreadNotifications();
+    }
+  }, []);
+
+  const loadNotificationHistory = () => {
+    setIsLoading(true);
+    try {
+      const notificationHistory = window.notificationsService?.getNotificationHistory() || [];
+      setHistory(notificationHistory);
+      
+      // Calcular estatísticas
+      const today = new Date().toDateString();
+      const todayNotifications = notificationHistory.filter(n => 
+        new Date(n.timestamp).toDateString() === today
+      );
+      
+      setStats({
+        total: notificationHistory.length,
+        today: todayNotifications.length,
+        unread: notificationHistory.filter(n => !n.read).length
+      });
+    } catch (error) {
+      console.error('❌ Erro ao carregar histórico:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredHistory = React.useMemo(() => {
+    if (filter === 'all') return history;
+    return history.filter(notification => {
+      if (filter === 'tasks') return notification.type === 'task' || notification.tag?.includes('task');
+      if (filter === 'events') return notification.type === 'event' || notification.tag?.includes('event');
+      if (filter === 'news') return notification.type === 'news' || notification.tag?.includes('news');
+      return true;
+    });
+  }, [history, filter]);
+
+  const markAsRead = (notificationId) => {
+    try {
+      const logs = JSON.parse(localStorage.getItem('notificationLogs') || '[]');
+      const updatedLogs = logs.map(log => 
+        log.id === notificationId ? { ...log, read: true } : log
+      );
+      localStorage.setItem('notificationLogs', JSON.stringify(updatedLogs));
+      loadNotificationHistory();
+      
+      // Atualizar contador
+      if (window.updateUnreadNotifications) {
+        window.updateUnreadNotifications();
+      }
+    } catch (error) {
+      console.error('❌ Erro ao marcar como lida:', error);
+    }
+  };
+
+  const clearHistory = () => {
+    if (confirm('Tem certeza que deseja limpar todo o histórico de notificações?')) {
+      window.notificationsService?.clearHistory();
+      loadNotificationHistory();
+      
+      // Atualizar contador
+      if (window.updateUnreadNotifications) {
+        window.updateUnreadNotifications();
+      }
+    }
+  };
+
+  const markAllAsRead = () => {
+    try {
+      const logs = JSON.parse(localStorage.getItem('notificationLogs') || '[]');
+      const updatedLogs = logs.map(log => ({ ...log, read: true }));
+      localStorage.setItem('notificationLogs', JSON.stringify(updatedLogs));
+      loadNotificationHistory();
+      
+      // Atualizar contador
+      if (window.updateUnreadNotifications) {
+        window.updateUnreadNotifications();
+      }
+    } catch (error) {
+      console.error('❌ Erro ao marcar todas como lidas:', error);
+    }
+  };
+
+  const handleNotificationClick = (notification) => {
+    // Marcar como lida
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+
+    // Navegar para o item relevante
+    if (notification.type === 'task' || notification.tag?.includes('task')) {
+      if (window.navigateToTask && notification.taskId) {
+        window.navigateToTask(notification.taskId);
+      } else {
+        setCurrentView('tasks');
+      }
+    } else if (notification.type === 'event' || notification.tag?.includes('event')) {
+      if (window.navigateToAgenda && notification.eventDate) {
+        window.navigateToAgenda(notification.eventDate);
+      } else {
+        setCurrentView('agenda');
+      }
+    } else if (notification.type === 'news' || notification.tag?.includes('news')) {
+      setCurrentView('news');
+    }
+  };
+
+  const getNotificationIcon = (notification) => {
+    if (notification.type === 'task' || notification.tag?.includes('task')) return '📋';
+    if (notification.type === 'event' || notification.tag?.includes('event')) return '📅';
+    if (notification.type === 'news' || notification.tag?.includes('news')) return '📰';
+    if (notification.tag === 'test') return '🧪';
+    return notification.icon || '🔔';
+  };
+
+  const getNotificationColor = (notification) => {
+    if (notification.type === 'task' || notification.tag?.includes('task')) return '#28a745';
+    if (notification.type === 'event' || notification.tag?.includes('event')) return '#007bff';
+    if (notification.type === 'news' || notification.tag?.includes('news')) return '#fd7e14';
+    if (notification.tag === 'test') return '#6f42c1';
+    return '#6c757d';
+  };
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+
+    if (diffInSeconds < 60) return 'há alguns segundos';
+    if (diffInSeconds < 3600) return `há ${Math.floor(diffInSeconds / 60)} min`;
+    if (diffInSeconds < 86400) return `há ${Math.floor(diffInSeconds / 3600)} h`;
+    if (diffInSeconds < 604800) return `há ${Math.floor(diffInSeconds / 86400)} dias`;
+    return time.toLocaleDateString('pt-PT');
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '400px',
+        color: darkMode ? '#ccc' : '#666'
+      }}>
+        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔄</div>
+        <div>Carregando histórico...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      maxWidth: '900px',
+      margin: '0 auto',
+      color: darkMode ? '#fff' : '#333'
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '2rem',
+        flexWrap: 'wrap',
+        gap: '1rem'
+      }}>
+        <div>
+          <h2 style={{
+            margin: '0 0 0.5rem 0',
+            fontSize: '1.8rem',
+            fontWeight: '600'
+          }}>
+            🔔 Centro de Notificações
+          </h2>
+          <div style={{
+            display: 'flex',
+            gap: '1rem',
+            fontSize: '0.9rem',
+            color: darkMode ? '#aaa' : '#666'
+          }}>
+            <span>Total: {stats.total}</span>
+            <span>Hoje: {stats.today}</span>
+            <span>Não lidas: {stats.unread}</span>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {stats.unread > 0 && (
+            <button
+              onClick={markAllAsRead}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#28a745',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+            >
+              ✅ Marcar todas como lidas
+            </button>
+          )}
+          <button
+            onClick={() => window.notificationsService?.testNotification()}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#6f42c1',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#5a2d91'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#6f42c1'}
+          >
+            🧪 Testar
+          </button>
+          <button
+            onClick={clearHistory}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#dc3545',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#c82333'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#dc3545'}
+          >
+            🗑️ Limpar
+          </button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginBottom: '1.5rem',
+        flexWrap: 'wrap'
+      }}>
+        {[
+          { id: 'all', label: 'Todas', icon: '🔔' },
+          { id: 'tasks', label: 'Tarefas', icon: '📋' },
+          { id: 'events', label: 'Eventos', icon: '📅' },
+          { id: 'news', label: 'Notícias', icon: '📰' }
+        ].map(filterOption => (
+          <button
+            key={filterOption.id}
+            onClick={() => setFilter(filterOption.id)}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: filter === filterOption.id ? '#007bff' : (darkMode ? '#444' : '#f8f9fa'),
+              color: filter === filterOption.id ? '#fff' : (darkMode ? '#fff' : '#333'),
+              border: `1px solid ${filter === filterOption.id ? '#007bff' : (darkMode ? '#666' : '#dee2e6')}`,
+              borderRadius: '20px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {filterOption.icon} {filterOption.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Lista de Notificações */}
+      {filteredHistory.length === 0 ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '3rem',
+          color: darkMode ? '#888' : '#666'
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔔</div>
+          <h3 style={{ margin: '0 0 0.5rem 0' }}>Nenhuma notificação encontrada</h3>
+          <p style={{ margin: 0 }}>
+            {filter === 'all' 
+              ? 'Não há notificações no histórico'
+              : `Não há notificações de ${filter === 'tasks' ? 'tarefas' : filter === 'events' ? 'eventos' : 'notícias'}`
+            }
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem'
+        }}>
+          {filteredHistory.map(notification => (
+            <div
+              key={notification.id}
+              onClick={() => handleNotificationClick(notification)}
+              style={{
+                padding: '1rem',
+                backgroundColor: darkMode ? '#333' : '#f8f9fa',
+                border: `1px solid ${darkMode ? '#555' : '#dee2e6'}`,
+                borderLeft: `4px solid ${getNotificationColor(notification)}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                opacity: notification.read ? 0.7 : 1
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = darkMode ? '#444' : '#e9ecef';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = darkMode ? '#333' : '#f8f9fa';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  fontSize: '1.5rem',
+                  minWidth: '2rem',
+                  textAlign: 'center'
+                }}>
+                  {getNotificationIcon(notification)}
+                </div>
+                
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '0.25rem'
+                  }}>
+                    <h4 style={{
+                      margin: 0,
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: darkMode ? '#fff' : '#333'
+                    }}>
+                      {notification.title}
+                    </h4>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.8rem',
+                      color: darkMode ? '#aaa' : '#666'
+                    }}>
+                      {!notification.read && (
+                        <span style={{
+                          backgroundColor: '#007bff',
+                          color: '#fff',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          fontSize: '0.7rem',
+                          fontWeight: '500'
+                        }}>
+                          Nova
+                        </span>
+                      )}
+                      <span>{formatTimeAgo(notification.timestamp)}</span>
+                    </div>
+                  </div>
+                  
+                  <p style={{
+                    margin: 0,
+                    color: darkMode ? '#ccc' : '#666',
+                    lineHeight: 1.4
+                  }}>
+                    {notification.body}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Ações rápidas */}
+      {filteredHistory.length > 0 && (
+        <div style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          backgroundColor: darkMode ? '#2a2a2a' : '#f8f9fa',
+          borderRadius: '8px',
+          border: `1px solid ${darkMode ? '#444' : '#dee2e6'}`
+        }}>
+          <h4 style={{
+            margin: '0 0 1rem 0',
+            fontSize: '1rem',
+            fontWeight: '600'
+          }}>
+            🚀 Ações Rápidas
+          </h4>
+          <div style={{
+            display: 'flex',
+            gap: '0.75rem',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={() => setCurrentView('tasks')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#28a745',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              📋 Ver Tarefas
+            </button>
+            <button
+              onClick={() => setCurrentView('agenda')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#007bff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              📅 Ver Agenda
+            </button>
+            <button
+              onClick={() => setCurrentView('settings')}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#6c757d',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              ⚙️ Configurações
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3997,35 +4794,13 @@ function SettingsView({ darkMode, toggleDarkMode, user }) {
           {message}
         </div>
       )}
-      
-      {/* Notificações */}
+        {/* Notificações Avançadas */}
       <div style={{ marginBottom: '2rem' }}>
-        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>Notificações</h4>
-        <div style={{ 
-          padding: '1rem', 
-          backgroundColor: darkMode ? '#3a3a3a' : '#f8f9fa',
-          border: `1px solid ${darkMode ? '#555' : '#ddd'}`,
-          borderRadius: '8px'
-        }}>          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '0.5rem' }}>
-            <input 
-              type="checkbox" 
-              checked={notifications} 
-              onChange={(e) => handleNotificationChange(e.target.checked)}
-              style={{ marginRight: '0.5rem' }}
-            />
-            <span style={{ color: darkMode ? '#fff' : '#333' }}>Notificações push</span>
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-            <input 
-              type="checkbox" 
-              checked={emailUpdates} 
-              onChange={(e) => handleEmailUpdatesChange(e.target.checked)}
-              style={{ marginRight: '0.5rem' }}
-            />
-            <span style={{ color: darkMode ? '#fff' : '#333' }}>Atualizações por email</span>
-          </label>
-        </div>
-      </div>      {/* Categorias de Notícias */}
+        <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>
+          🔔 Sistema de Notificações
+        </h4>
+        <NotificationSettings darkMode={darkMode} />
+      </div>{/* Categorias de Notícias */}
       <div style={{ marginBottom: '2rem' }}>
         <h4 style={{ color: darkMode ? '#ccc' : '#555', marginBottom: '1rem' }}>
           Categorias de Notícias Favoritas
@@ -4149,7 +4924,8 @@ function Dashboard() {
   const [currentView, setCurrentView] = React.useState('news'); // 'news', 'tasks', 'agenda', 'settings', 'create', 'profile'
   const [previousView, setPreviousView] = React.useState('news'); // Guardar página anterior
   const [stats, setStats] = React.useState({});  const [darkMode, setDarkMode] = React.useState(false);  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
-  const [userNewsCategories, setUserNewsCategories] = React.useState(['technology', 'business', 'science']);const menuItems = [
+  const [userNewsCategories, setUserNewsCategories] = React.useState(['technology', 'business', 'science']);
+  const [unreadNotifications, setUnreadNotifications] = React.useState(0);const menuItems = [
     { id: 'news', name: 'Início', icon: '🏠' },
     { id: 'tasks', name: 'Tarefas', icon: '✅' },
     { id: 'agenda', name: 'Agenda', icon: '📅' },
@@ -4161,6 +4937,15 @@ function Dashboard() {
       loadUserData();
       loadNewsSettings();
     });
+
+    // Inicializar serviço de notificações
+    if (window.notificationsService) {
+      window.notificationsService.initialize().then(isGranted => {
+        console.log('🔔 Notificações inicializadas:', isGranted ? 'Ativadas' : 'Desativadas');
+        // Atualizar contador inicial
+        updateUnreadNotifications();
+      });
+    }
     
     // Load dark mode preference
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -4171,6 +4956,59 @@ function Dashboard() {
     // Definir função global para atualizar dados do usuário
     window.updateUserData = (updatedUser) => {
       setUser(updatedUser);
+    };
+    
+    // Função para atualizar contador de notificações não lidas
+    window.updateUnreadNotifications = updateUnreadNotifications;
+
+    // Função para atualizar contador de notificações não lidas
+    function updateUnreadNotifications() {
+      try {
+        const history = window.notificationsService?.getNotificationHistory() || [];
+        const unreadCount = history.filter(n => !n.read).length;
+        setUnreadNotifications(unreadCount);
+      } catch (error) {
+        console.error('❌ Erro ao atualizar contador de notificações:', error);
+      }
+    }
+
+    // Funções globais para navegação de notificações
+    window.navigateToTask = (taskId) => {
+      setCurrentView('tasks');
+      // Destacar a tarefa específica após um pequeno delay
+      setTimeout(() => {
+        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          taskElement.style.backgroundColor = '#fffbf0';
+          taskElement.style.border = '2px solid #ffc107';
+          setTimeout(() => {
+            taskElement.style.backgroundColor = '';
+            taskElement.style.border = '';
+          }, 3000);
+        }
+      }, 500);
+    };
+
+    window.navigateToAgenda = (date) => {
+      setCurrentView('agenda');
+      // Navegar para a data específica após um pequeno delay
+      setTimeout(() => {
+        if (window.calendarRef && window.calendarRef.goToDate) {
+          window.calendarRef.goToDate(new Date(date));
+        }
+        // Destacar a data
+        const dateElement = document.querySelector(`[data-date="${date}"]`);
+        if (dateElement) {
+          dateElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          dateElement.style.backgroundColor = '#e3f2fd';
+          dateElement.style.border = '2px solid #2196f3';
+          setTimeout(() => {
+            dateElement.style.backgroundColor = '';
+            dateElement.style.border = '';
+          }, 3000);
+        }
+      }, 500);
     };
     
     // Escutar mudanças nas configurações de notícias
@@ -4571,7 +5409,67 @@ function Dashboard() {
                   </div>
                 </div>              )}
             </div>
-          )}            {/* Botão de Configurações */}
+          )}            {/* Botão de Notificações */}
+          <button 
+            onClick={() => setCurrentView('notifications')}
+            style={{ 
+              position: 'relative',
+              width: 40, height: 40, borderRadius: '50%', border: 'none',
+              background: currentView === 'notifications' ? '#007bff' : (darkMode ? '#333' : '#f0f0f0'), 
+              color: currentView === 'notifications' ? '#fff' : (darkMode ? '#fff' : '#333'), 
+              fontSize: '1.2rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title="Centro de Notificações"
+            onMouseEnter={(e) => {
+              if (currentView !== 'notifications') {
+                e.target.style.backgroundColor = darkMode ? '#3a3a3a' : '#e8e8e8';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentView !== 'notifications') {
+                e.target.style.backgroundColor = darkMode ? '#333' : '#f0f0f0';
+              }
+            }}
+          >
+            🔔
+            {/* Contador de notificações não lidas */}
+            {unreadNotifications > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-6px',
+                backgroundColor: '#dc3545',
+                color: '#fff',
+                borderRadius: '50%',
+                minWidth: '18px',
+                height: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.7rem',
+                fontWeight: 'bold',
+                border: `2px solid ${darkMode ? '#333' : '#f0f0f0'}`
+              }}>
+                {unreadNotifications > 99 ? '99+' : unreadNotifications}
+              </span>
+            )}
+            {/* Indicador de status das notificações */}
+            <span style={{
+              position: 'absolute',
+              bottom: '-2px',
+              right: '-2px',
+              backgroundColor: window.notificationsService?.permission === 'granted' ? '#28a745' : '#ffc107',
+              borderRadius: '50%',
+              width: '8px',
+              height: '8px',
+              border: `1px solid ${darkMode ? '#333' : '#f0f0f0'}`
+            }}></span>
+          </button>
+
+          {/* Botão de Configurações */}
           <button 
             onClick={() => setCurrentView('settings')}
             style={{ 
@@ -4809,6 +5707,20 @@ function Dashboard() {
               <NewsSection darkMode={darkMode} />
             </div>
           </div>
+        )}
+
+        {currentView === 'notifications' && (
+          <div style={{ 
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            borderRadius: '12px',
+            border: `1px solid ${darkMode ? '#333' : '#e0e0e0'}`,
+            padding: '2rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            marginLeft: '-3rem',
+            marginRight: '-2rem'
+          }}>
+            <NotificationCenter darkMode={darkMode} />
+          </div>
         )}        {currentView === 'settings' && (
           <div style={{ 
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
@@ -4824,7 +5736,7 @@ function Dashboard() {
         )}
 
         {/* View padrão para casos não tratados */}
-        {!['news', 'tasks', 'agenda', 'noticias', 'settings'].includes(currentView) && (
+        {!['news', 'tasks', 'agenda', 'noticias', 'notifications', 'settings'].includes(currentView) && (
           <div style={{ 
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',

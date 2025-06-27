@@ -65,6 +65,28 @@
                 100% { transform: rotate(360deg); }
             }
             
+            @keyframes slideIn {
+                0% { 
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                100% { 
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                0% { 
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                100% { 
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
             .loading-spinner {
                 animation: spin 1s linear infinite;
             }
@@ -3890,6 +3912,43 @@ function NotificationSettings({ darkMode }) {
   const handleSettingsChange = (newSettings) => {
     setSettings(newSettings);
     window.notificationsService?.saveSettings(newSettings);
+    
+    // Force refresh of notification button in parent component
+    if (window.forceNotificationButtonUpdate) {
+      window.forceNotificationButtonUpdate();
+    }
+    
+    // Show immediate feedback when toggling main notifications
+    if (newSettings.enabled !== settings.enabled) {
+      const message = newSettings.enabled 
+        ? '🔔 Notificações ativadas! Você receberá lembretes de tarefas e eventos.'
+        : '🔕 Notificações desativadas. Nenhum lembrete será enviado.';
+      
+      // Create a temporary notification to show the change
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${newSettings.enabled ? '#d4edda' : '#f8d7da'};
+        color: ${newSettings.enabled ? '#155724' : '#721c24'};
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid ${newSettings.enabled ? '#c3e6cb' : '#f5c6cb'};
+        z-index: 10000;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-weight: 500;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in forwards';
+        setTimeout(() => document.body.removeChild(notification), 300);
+      }, 3000);
+    }
   };
 
   const handleTestNotification = () => {
@@ -3981,7 +4040,18 @@ function NotificationSettings({ darkMode }) {
               Configurações Gerais
             </h5>
             <div style={{ display: 'grid', gap: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: `2px solid ${settings.enabled ? '#28a745' : '#dc3545'}`,
+                backgroundColor: settings.enabled 
+                  ? (darkMode ? '#1a3d2e' : '#f8fff9') 
+                  : (darkMode ? '#3d1a1a' : '#fff8f8'),
+                transition: 'all 0.3s ease'
+              }}>
                 <input 
                   type="checkbox" 
                   checked={settings.enabled}
@@ -3989,13 +4059,28 @@ function NotificationSettings({ darkMode }) {
                     ...settings,
                     enabled: e.target.checked
                   })}
-                  style={{ marginRight: '0.75rem' }}
+                  style={{ 
+                    marginRight: '0.75rem',
+                    transform: 'scale(1.2)'
+                  }}
                 />
                 <span style={{ 
                   color: darkMode ? '#fff' : '#333',
-                  fontWeight: settings.enabled ? 'normal' : 'bold'
+                  fontWeight: '600',
+                  fontSize: '1rem'
                 }}>
                   {settings.enabled ? '🔔 Todas as notificações ativadas' : '🔕 Notificações desativadas'}
+                </span>
+                <span style={{
+                  marginLeft: 'auto',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold',
+                  backgroundColor: settings.enabled ? '#28a745' : '#dc3545',
+                  color: '#fff'
+                }}>
+                  {settings.enabled ? 'ON' : 'OFF'}
                 </span>
               </label>
 
@@ -5509,7 +5594,11 @@ function Dashboard() {
               }
             }}
           >
-            🔔
+            {(() => {
+              const notificationSettings = window.notificationsService?.getSettings();
+              const isGloballyDisabled = notificationSettings && !notificationSettings.enabled;
+              return isGloballyDisabled ? '🔕' : '🔔';
+            })()}
             {/* Contador de notificações não lidas */}
             {unreadNotifications > 0 && (
               <span style={{
@@ -5536,7 +5625,12 @@ function Dashboard() {
               position: 'absolute',
               bottom: '-2px',
               right: '-2px',
-              backgroundColor: window.notificationsService?.permission === 'granted' ? '#28a745' : '#ffc107',
+              backgroundColor: (() => {
+                const notificationSettings = window.notificationsService?.getSettings();
+                const isGloballyDisabled = notificationSettings && !notificationSettings.enabled;
+                if (isGloballyDisabled) return '#6c757d'; // Gray for disabled
+                return window.notificationsService?.permission === 'granted' ? '#28a745' : '#ffc107';
+              })(),
               borderRadius: '50%',
               width: '8px',
               height: '8px',

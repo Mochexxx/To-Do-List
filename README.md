@@ -66,3 +66,10 @@ Depois aceda a: `http://localhost:8000`
 
 ---
 **© 2025 Pedro Sousa**
+
+
+
+![alt text](<Captura de ecrã 2025-06-27 143206.png>)
+
+
+![alt text](<Captura de ecrã 2025-06-27 143427.png>) ![alt text](<Captura de ecrã 2025-06-27 143218.png>) ![alt text](<Captura de ecrã 2025-06-27 143226.png>) ![alt text](<Captura de ecrã 2025-06-27 143235.png>) ![alt text](<Captura de ecrã 2025-06-27 143309.png>) ![alt text](<Captura de ecrã 2025-06-27 143314.png>) ![alt text](<Captura de ecrã 2025-06-27 143349.png>) ![alt text](<Captura de ecrã 2025-06-27 143355.png>) ![alt text](<Captura de ecrã 2025-06-27 143359.png>) ![alt text](<Captura de ecrã 2025-06-27 143413.png>) ![alt text](<Captura de ecrã 2025-06-27 143418.png>) ![alt text](<Captura de ecrã 2025-06-27 143423.png>)
